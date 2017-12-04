@@ -48,14 +48,10 @@ volatile uint8_t SD_Log_Enabled = 0;
 
 char newLine[] = "\r\n";
 
-extern void *LSM6DSM_X_0_handle;
 extern void *LSM6DSM_G_0_handle;
 extern void *LSM303AGR_M_0_handle;
 extern void *LSM303AGR_X_0_handle;
-extern void *LPS22HB_P_0_handle;
-extern void *LPS22HB_T_0_handle;
 extern void *VL53L0X_0_handler;
-extern volatile uint8_t no_VL53L0X;
 
 
 /**
@@ -90,11 +86,11 @@ void DATALOG_SD_Init(void)
 uint8_t DATALOG_SD_Log_Enable(void)
 {
   static uint16_t sdcard_file_counter = 0;
-  char header[] = "T [ms],AccX [mg],AccY [mg],AccZ [mg],GyroX [mdps],GyroY [mdps],GyroZ [mdps],MagX [mgauss],MagY [mgauss],MagZ [mgauss],P [mB],T [°C],\r\n";
+  char header[] = "T [ms],AccX [mg],AccY [mg],AccZ [mg],GyroX [mdps],GyroY [mdps],GyroZ [mdps],MagX [mgauss],MagY [mgauss],MagZ [mgauss]\r\n";
   uint32_t byteswritten; /* written byte count */
   char file_name[30] = {0};
   
-  sprintf(file_name, "%s%.3d%s", "BlueCoin_Log_N", sdcard_file_counter, ".csv");
+  sprintf(file_name, "%s%.3d%s", "Log_N", sdcard_file_counter, ".csv");
   sdcard_file_counter++;
 
   HAL_Delay(100);
@@ -179,18 +175,6 @@ DrvStatusTypeDef getSensorsData(T_SensorsData *mptr)
     mptr->mag.AXIS_X = 0;
     mptr->mag.AXIS_Y = 0;
     mptr->mag.AXIS_Z = 0;
-    ret = COMPONENT_ERROR;
-  }
-  
-  if ( BSP_PRESSURE_Get_Press( LPS22HB_P_0_handle, &mptr->pressure ) == COMPONENT_ERROR )
-  {
-    mptr->pressure = 0.0f;
-    ret = COMPONENT_ERROR;
-  }
-  
-  if ( BSP_TEMPERATURE_Get_Temp( LPS22HB_T_0_handle, &mptr->temperature ) == COMPONENT_ERROR )
-  {
-    mptr->temperature = 0.0f;
     ret = COMPONENT_ERROR;
   }
   
