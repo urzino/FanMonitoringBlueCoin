@@ -64,5 +64,6 @@ def plotCSV(file_path):
     plt.show()
 
 if __name__ == "__main__":
-    file_path = sys.argv[1]
-    plotCSV(file_path)
+    if len(sys.argv) > 1 && sys.argv[1] != '':
+        file_path = sys.argv[1]
+        plotCSV(file_path)
