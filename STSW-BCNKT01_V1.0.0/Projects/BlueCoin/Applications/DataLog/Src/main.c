@@ -76,7 +76,7 @@ osSemaphoreDef(readDataSem);
 
 /* LoggingInterface = USB_Datalog  --> Save sensors data on SDCard (enable with double click) */
 /* LoggingInterface = SDCARD_Datalog  --> Send sensors data via USB */
-LogInterface_TypeDef LoggingInterface = USB_Datalog;
+LogInterface_TypeDef LoggingInterface = SDCARD_Datalog;
 
 USBD_HandleTypeDef  USBD_Device;
 static volatile uint8_t BUTTONInterrupt = 0;
@@ -113,6 +113,8 @@ osTimerId sensorTimId;
 osTimerDef(SensorTimer, dataTimer_Callback);
 char data_s_prox[32];
 uint32_t  exec;
+
+void print_readme();
 
 
 /**
@@ -186,6 +188,8 @@ int main(void)
   /* Configure Power Voltage Detector(PVD) to detect if battery voltage is low */
   PVD_Config();
 
+  print_readme();
+
   /* Thread 1 definition */
   osThreadDef(THREAD_1, GetData_Thread, osPriorityAboveNormal, 0, configMINIMAL_STACK_SIZE*4);
   
@@ -204,6 +208,21 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   for (;;);
 
+}
+
+void print_readme()
+{
+#include "ff_gen_drv.h"
+#include "sd_diskio.h"
+	FIL readme;
+	char file_name[30] = {0};
+	uint32_t byteswritten;
+	char text[] = "Dalla Longa Milani Urzino";
+	sprintf(file_name, "readme.txt");
+
+	f_open(&readme, (char const*)file_name, 0x02 | 0x08);
+	f_write(&readme, (const void*)&text, sizeof(text)-1, (void *)&byteswritten);
+	f_close(&readme);
 }
 
 /**
@@ -279,8 +298,13 @@ static void GetData_Thread(void const *argument)
     {
       uint8_t i;
       
+      char data_s[256];
+      int size;
+
       if(SD_Log_Enabled)
       {
+        size = sprintf(data_s, "Batteria scarica!");
+        DATALOG_SD_writeBuf(data_s, size);
         DATALOG_SD_Log_Disable();
       }
       
@@ -347,28 +371,21 @@ static void WriteData_Thread(void const *argument)
         BSP_LED_On(LED5);
         if(LoggingInterface == USB_Datalog)
         {
-          size = sprintf(data_s, "TimeStamp: %d\r\n Acc_X: %d, Acc_Y: %d, Acc_Z :%d\r\n Gyro_X:%d, Gyro_Y:%d, Gyro_Z:%d\r\n Magn_X:%d, Magn_Y:%d, Magn_Z:%d\r\n Press:%5.2f, Temp:%5.2f\r\n",
+          size = sprintf(data_s, "TimeStamp: %d\r\n Acc_X: %d, Acc_Y: %d, Acc_Z :%d\r\n Gyro_X:%d, Gyro_Y:%d, Gyro_Z:%d\r\n Magn_X:%d, Magn_Y:%d, Magn_Z:%d\r\n",
         		         (int)rptr->ms_counter,
                          (int)rptr->acc.AXIS_X, (int)rptr->acc.AXIS_Y, (int)rptr->acc.AXIS_Z,
                          (int)rptr->gyro.AXIS_X, (int)rptr->gyro.AXIS_Y, (int)rptr->gyro.AXIS_Z,
-                         (int)rptr->mag.AXIS_X, (int)rptr->mag.AXIS_Y, (int)rptr->mag.AXIS_Z,
-                         rptr->pressure, rptr->temperature);
+                         (int)rptr->mag.AXIS_X, (int)rptr->mag.AXIS_Y, (int)rptr->mag.AXIS_Z);
           osPoolFree(sensorPool_id, rptr);      // free memory allocated for message
           CDC_Fill_Buffer(( uint8_t * )data_s, size);
-          if(!no_VL53L0X)
-          {
-            size = sprintf(data_s, " PROX: %d\n\r", (int)rptr->range);
-            CDC_Fill_Buffer(( uint8_t * )data_s, size);
-          }
         }
         else
         {           
-          size = sprintf(data_s, "%d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %5.2f, %5.2f\r\n",
+          size = sprintf(data_s, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
         		         (int)rptr->ms_counter,
                          (int)rptr->acc.AXIS_X, (int)rptr->acc.AXIS_Y, (int)rptr->acc.AXIS_Z,
                          (int)rptr->gyro.AXIS_X, (int)rptr->gyro.AXIS_Y, (int)rptr->gyro.AXIS_Z,
-                         (int)rptr->mag.AXIS_X, (int)rptr->mag.AXIS_Y, (int)rptr->mag.AXIS_Z,
-                         rptr->pressure, rptr->temperature);
+                         (int)rptr->mag.AXIS_X, (int)rptr->mag.AXIS_Y, (int)rptr->mag.AXIS_Z);
           osPoolFree(sensorPool_id, rptr);      // free memory allocated for message
           DATALOG_SD_writeBuf(data_s, size);
         }
@@ -469,21 +486,6 @@ static void initializeAllSensors( void )
   {
     while(1);
   }
-  
-  if (BSP_PRESSURE_Init( LPS22HB_P_0, &LPS22HB_P_0_handle ) != COMPONENT_OK)
-  {
-    while(1);
-  }
-  
-  if (BSP_TEMPERATURE_Init( LPS22HB_T_0, &LPS22HB_T_0_handle ) != COMPONENT_OK)
-  {
-    while(1);
-  }
-  
-  if (BSP_PROX_Init( VL53L0X_0, &VL53L0X_0_handler) == COMPONENT_ERROR)
-  {
-    no_VL53L0X=1;
-  }
 }
 
 /**
@@ -497,15 +499,6 @@ void enableAllSensors( void )
   BSP_GYRO_Sensor_Enable( LSM6DSM_G_0_handle );
   BSP_ACCELERO_Sensor_Enable( LSM303AGR_X_0_handle );
   BSP_MAGNETO_Sensor_Enable( LSM303AGR_M_0_handle );
-  BSP_PRESSURE_Sensor_Enable( LPS22HB_P_0_handle );
-  BSP_TEMPERATURE_Sensor_Enable( LPS22HB_T_0_handle );
-  
-  if(!no_VL53L0X)
-  {
-    BSP_PROX_Sensor_Enable( VL53L0X_0_handler );
-    BSP_PROX_Set_DeviceMode( VL53L0X_0_handler, CONTINUOUS );
-    BSP_PROX_Set_RangingProfile(VL53L0X_0_handler, VL53L0X_PROFILE_LONG_RANGE);
-  }
 }
 /**
 * @brief  Set ODR all sensors
@@ -517,8 +510,6 @@ void setOdrAllSensors( void )
   BSP_ACCELERO_Set_ODR_Value( LSM303AGR_X_0_handle, ACCELERO_ODR);
   BSP_MAGNETO_Set_ODR_Value( LSM303AGR_M_0_handle, MAGNETO_ODR);
   BSP_GYRO_Set_ODR_Value(LSM6DSM_G_0_handle, GYRO_ODR);
-  BSP_PRESSURE_Set_ODR_Value( LPS22HB_P_0_handle, PRESSURE_ODR);
-  BSP_TEMPERATURE_Set_ODR_Value( LPS22HB_T_0_handle, TEMPERATURE_ODR);
 }
 
 
@@ -533,13 +524,6 @@ void disableAllSensors( void )
   BSP_ACCELERO_Sensor_Disable( LSM303AGR_X_0_handle );
   BSP_GYRO_Sensor_Disable( LSM6DSM_G_0_handle );
   BSP_MAGNETO_Sensor_Disable( LSM303AGR_M_0_handle );
-  BSP_TEMPERATURE_Sensor_Disable( LPS22HB_T_0_handle );
-  BSP_PRESSURE_Sensor_Disable( LPS22HB_P_0_handle );
-  
-  if(!no_VL53L0X)
-  {
-    BSP_PROX_Sensor_Disable( VL53L0X_0_handler );
-  }
 }
 
 
