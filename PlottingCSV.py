@@ -2,9 +2,14 @@ import matplotlib.pyplot as plt
 import csv
 import sys
 import os
+import numpy
 '''
 
 '''
+
+def running_mean(x, N):
+    cumsum = numpy.cumsum(numpy.insert(x, 0, 0)) 
+    return (cumsum[N:] - cumsum[:-N]) / float(N)
 
 def plotCSV():
 
@@ -39,6 +44,20 @@ def plotCSV():
                 MagY.append(int(row[8]))
                 MagZ.append(int(row[9]))
             csvfile.close()
+
+        filter_size=6
+        accX = running_mean(accX,filter_size)
+        accY = running_mean(accY,filter_size)
+        accZ = running_mean(accZ,filter_size)
+        GyroX = running_mean(GyroX,filter_size)
+        GyroY = running_mean(GyroY,filter_size)
+        GyroZ = running_mean(GyroZ,filter_size)
+        MagX = running_mean(MagX,filter_size)
+        MagY = running_mean(MagY,filter_size)
+        MagZ = running_mean(MagZ,filter_size)
+         
+        time = time[filter_size-1:]
+
         plt.subplot(221)
         plt.plot(time,accX, label='AccX')
         plt.plot(time,accY, label='AccY')
@@ -65,6 +84,7 @@ def plotCSV():
         plt.ylabel('Magnetometer')
         plt.title('Magnetometer data')
         plt.legend()
+
         plt.show()
 
 if __name__ == "__main__":

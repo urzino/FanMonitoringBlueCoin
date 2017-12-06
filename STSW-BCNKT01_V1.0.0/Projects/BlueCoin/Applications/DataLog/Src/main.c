@@ -193,21 +193,6 @@ int main(void) {
 
 }
 
-void print_readme() {
-#include "ff_gen_drv.h"
-#include "sd_diskio.h"
-	FIL readme;
-	char file_name[30] = { 0 };
-	uint32_t byteswritten;
-	char text[] = "Dalla Longa Milani Urzino";
-	sprintf(file_name, "readme.txt");
-
-	f_open(&readme, (char const*) file_name, 0x02 | 0x08);
-	f_write(&readme, (const void*) &text, sizeof(text) - 1,
-			(void *) &byteswritten);
-	f_close(&readme);
-}
-
 /**
  * @brief  Get data raw from sensors to queue
  * @param  thread not used
