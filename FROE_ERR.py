@@ -17,10 +17,14 @@ class _Froe(object):
         self.nY= args.ny if args.ny != None else 10
         self.polDegree = args.deg if args.deg != None else 3
         self.inclBias = args.incbias if args.incbias != None else True
-        self.varianceToExplain1 = args.var1 if args.var1 != None else 0.99976
+        self.varianceToExplain1 = args.var1 if args.var1 != None else 0.99999
         self.varianceToExplain2 = args.var2 if args.var2 != None else 0.99976
         self.convergenceThresholdNARMAX = args.convth if args.convth != None else 0.2
         self.maxIterationsNARMAX = args.maxit if args.maxit != None else 10
+
+    def running_mean(self, x, N):
+        cumsum = np.cumsum(np.insert(x, 0, 0))
+        return (cumsum[N:] - cumsum[:-N]) / float(N)
 
     def writeModel(self, Theta, regDim, nU, nY, nE, polDegree, inclBias): #write model as a string easier to print
         tempModelBasic = list()
@@ -300,12 +304,25 @@ class _Froe(object):
                 z3.append(int(row[1]))
             csvfile.close()
 
+        filter_size=6
+        u1 = u1[75:-75]
+        u1 = self.running_mean(u1,filter_size)
+        z1 = z1[75:-75]
+        z1 = self.running_mean(z1,filter_size)
+        u2 = u2[75:-75]
+        u2 = self.running_mean(u2,filter_size)
+        z2 = z2[75:-75]
+        z2 = self.running_mean(z2,filter_size)
+        u3 = u3[75:-75]
+        u3 = self.running_mean(u3,filter_size)
+        z3 = z3[75:-75]
+        z3 = self.running_mean(z3,filter_size)
         #Training Set
-        U, Y = np.array(u1[75:-75]) , np.array(z1[75:-75])
+        U, Y = np.array(u1) , np.array(z1)
 
         #Validation Set
-        Uval1, Yval1 = np.array(u2[75:-75]) , np.array(z2[75:-75])
-        Uval2, Yval2 = np.array(u3[75:-75]) , np.array(z3[75:-75])
+        Uval1, Yval1 = np.array(u2) , np.array(z2)
+        Uval2, Yval2 = np.array(u3) , np.array(z3)
 
         yDimIde = len(Y)
         uDimIde = len(U)
@@ -433,7 +450,7 @@ class _Froe(object):
         plt.show()
 
         plt.show()
-
+        '''
         #95% confidence
         confidence1 = np.full(shape = (yDimVal1), fill_value = (1.96 / np.sqrt(yDimVal1)) , dtype = np.float64)
         confidence2 = np.full(shape = (yDimVal2), fill_value = (1.96 / np.sqrt(yDimVal2)) , dtype = np.float64)
@@ -445,7 +462,7 @@ class _Froe(object):
             self.plotValidationTest(confidence2, residualsPredictionVal2 ,Uval2, yDimVal2, "Prediction", "2")
         if (not YhatSimulationVal2 is None):
             self.plotValidationTest(confidence2, residualsSimulationVal2 ,Uval2, yDimVal2, "Simulation", "2")
-
+        '''
 
 if __name__ == "__main__": #all optional parameters from terminal
     parser = argparse.ArgumentParser(description='Performs identification and validation on narx/narmax models.')

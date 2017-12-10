@@ -8,7 +8,7 @@ import numpy
 '''
 
 def running_mean(x, N):
-    cumsum = numpy.cumsum(numpy.insert(x, 0, 0)) 
+    cumsum = numpy.cumsum(numpy.insert(x, 0, 0))
     return (cumsum[N:] - cumsum[:-N]) / float(N)
 
 def plotCSV():
@@ -46,17 +46,28 @@ def plotCSV():
             csvfile.close()
 
         filter_size=6
+        accX = accX[75:-75]
         accX = running_mean(accX,filter_size)
+        accY = accY[75:-75]
         accY = running_mean(accY,filter_size)
+        accZ = accZ[75:-75]
         accZ = running_mean(accZ,filter_size)
+        GyroX = GyroX[75:-75]
         GyroX = running_mean(GyroX,filter_size)
+        GyroY = GyroY[75:-75]
         GyroY = running_mean(GyroY,filter_size)
+        GyroZ = GyroZ[75:-75]
         GyroZ = running_mean(GyroZ,filter_size)
+        MagX = MagX[75:-75]
         MagX = running_mean(MagX,filter_size)
+        MagY = MagY[75:-75]
         MagY = running_mean(MagY,filter_size)
+        MagZ = MagZ[75:-75]
         MagZ = running_mean(MagZ,filter_size)
-         
+        time = time[75:-75]
         time = time[filter_size-1:]
+
+        plt.figure(num=file_path)
 
         plt.subplot(221)
         plt.plot(time,accX, label='AccX')
