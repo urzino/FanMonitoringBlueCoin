@@ -365,13 +365,13 @@ class _Froe(object):
         if (not YhatPredictionIde is None):
             residualsPredictionIde = self.calcResiduals(Y, YhatPredictionIde, yDimIde)
             msePredictionIde = self.calcMSE(residualsPredictionIde, yDimIde)
-
+            '''
             #Simulation results on identification set
             YhatSimulationIde = self.generateYhat(1, U, Y, residualsPredictionIde, ThetaSelected, polDegree, inclBias, yDimIde, nU, nY, nE)
             if (not YhatSimulationIde is None):
                 residualsSimulationIde = self.calcResiduals(Y, YhatSimulationIde, yDimIde)
                 mseSimulationIde = self.calcMSE(residualsSimulationIde, yDimIde)
-
+            '''
         if (not YhatPredictionIde is None):
             print("MSPE" , msePredictionIde, "\n")
         if (not YhatSimulationIde is None):
@@ -384,13 +384,13 @@ class _Froe(object):
         if (not YhatPredictionVal1 is None):
             residualsPredictionVal1 = self.calcResiduals(Yval1, YhatPredictionVal1, yDimVal1)
             msePredictionVal1 = self.calcMSE(residualsPredictionVal1, yDimVal1)
-
+            '''
             #Simulation results on validation set 1
             YhatSimulationVal1 = self.generateYhat(1, Uval1, Yval1, residualsPredictionVal1, ThetaSelected, polDegree, inclBias, yDimVal1, nU, nY, nE)
             if (not YhatSimulationVal1 is None):
                 residualsSimulationVal1 = self.calcResiduals(Yval1, YhatSimulationVal1, yDimVal1)
                 mseSimulationVal1 = self.calcMSE(residualsSimulationVal1, yDimVal1)
-
+            '''
         if (not YhatPredictionVal1 is None):
             print("MSPE" , msePredictionVal1, "\n")
         if (not YhatSimulationVal1 is None):
@@ -403,13 +403,13 @@ class _Froe(object):
         if (not YhatPredictionVal2 is None):
             residualsPredictionVal2 = self.calcResiduals(Yval2, YhatPredictionVal2, yDimVal2)
             msePredictionVal2 = self.calcMSE(residualsPredictionVal2, yDimVal2)
-
+            '''
             #Simulation results on validation set 2
             YhatSimulationVal2 = self.generateYhat(1, Uval2, Yval2, residualsPredictionVal2, ThetaSelected, polDegree, inclBias, yDimVal2, nU, nY, nE)
             if (not YhatSimulationVal2 is None):
                 residualsSimulationVal2 = self.calcResiduals(Yval2, YhatSimulationVal2, yDimVal2)
                 mseSimulationVal2 = self.calcMSE(residualsSimulationVal2, yDimVal2)
-
+            '''
         if (not YhatPredictionVal2 is None):
             print("MSPE" , msePredictionVal2, "\n")
         if (not YhatSimulationVal2 is None):
@@ -417,34 +417,34 @@ class _Froe(object):
 
 
         plt.subplot("311")
-        plt.plot(Y, color = "red")
+        plt.plot(Y[30:], color = "red")
         if (not YhatPredictionIde is None):
-            plt.plot(YhatPredictionIde, color = "blue")
+            plt.plot(YhatPredictionIde[30:], color = "blue")
         if (not YhatSimulationIde is None):
-            plt.plot(YhatSimulationIde, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Identification Set')
+            plt.plot(YhatSimulationIde[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Identification Set
         plt.xlabel('time')
         plt.ylabel('output')
 
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot('312')
-        plt.plot(Yval1, color = "red")
+        plt.plot(Yval1[30:], color = "red")
         if (not YhatPredictionVal1 is None):
-            plt.plot(YhatPredictionVal1, color = "blue")
+            plt.plot(YhatPredictionVal1[30:], color = "blue")
         if (not YhatSimulationVal1 is None):
-            plt.plot(YhatSimulationVal1, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Validation Set 1')
+            plt.plot(YhatSimulationVal1[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 1
         plt.xlabel('time')
         plt.ylabel('output')
 
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot('313')
-        plt.plot(Yval2, color = "red")
+        plt.plot(Yval2[30:], color = "red")
         if (not YhatPredictionVal2 is None):
-            plt.plot(YhatPredictionVal2, color = "blue")
+            plt.plot(YhatPredictionVal2[30:], color = "blue")
         if (not YhatSimulationVal2 is None):
-            plt.plot(YhatSimulationVal2, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Validation Set 2')
+            plt.plot(YhatSimulationVal2[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 2
         plt.xlabel('time')
         plt.ylabel('output')
         plt.show()
