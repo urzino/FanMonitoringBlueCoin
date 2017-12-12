@@ -1,4 +1,5 @@
 import scipy.io as sio
+from scipy.signal import lfilter
 import numpy as np
 from matplotlib import pyplot as plt
 import itertools as it
@@ -12,13 +13,13 @@ import csv
 
 class _Froe(object):
     def __init__(self, args): #init all parameters from terminal or default values
-        self.nE = args.ne if args.ne != None else 0
+        self.nE = args.ne if args.ne != None else 3
         self.nU = args.nu if args.nu != None else 0
         self.nY= args.ny if args.ny != None else 10
         self.polDegree = args.deg if args.deg != None else 3
         self.inclBias = args.incbias if args.incbias != None else True
         self.varianceToExplain1 = args.var1 if args.var1 != None else 0.99999
-        self.varianceToExplain2 = args.var2 if args.var2 != None else 0.99976
+        self.varianceToExplain2 = args.var2 if args.var2 != None else 0.9999
         self.convergenceThresholdNARMAX = args.convth if args.convth != None else 0.2
         self.maxIterationsNARMAX = args.maxit if args.maxit != None else 10
 
@@ -295,7 +296,7 @@ class _Froe(object):
                 z2.append(int(row[1]))
             csvfile.close()
 
-        with open('Logs/cattivo1.csv','r') as csvfile:
+        with open('Logs/cattivo2.csv','r') as csvfile:
             next(csvfile, None);
             plots = csv.reader(csvfile, delimiter=',')
             i = 0
@@ -304,19 +305,20 @@ class _Froe(object):
                 z3.append(int(row[1]))
             csvfile.close()
 
+
+        b = [0.000921992213781247, 0.00335702792571534, 0.00666846411080491, 0.00755286336642893, 0.00103278035537582, -0.0154786656220236, -0.0369577564468621, -0.0489939394790694, -0.0332613413754055, 0.0208964377504099, 0.105771877241975, 0.194080920241419, 0.250550621094879, 0.250550621094879, 0.194080920241419, 0.105771877241975, 0.0208964377504099, -0.0332613413754055, -0.0489939394790694, -0.0369577564468621, -0.0154786656220236, 0.00103278035537582, 0.00755286336642893, 0.00666846411080491, 0.00335702792571534, 0.000921992213781247]
+
         filter_size=6
-        u1 = u1[75:-75]
-        u1 = self.running_mean(u1,filter_size)
+
         z1 = z1[75:-75]
-        z1 = self.running_mean(z1,filter_size)
-        u2 = u2[75:-75]
-        u2 = self.running_mean(u2,filter_size)
+        z1 = lfilter(b, [1.0], z1)
+        #z1 = self.running_mean(z1,filter_size)
         z2 = z2[75:-75]
-        z2 = self.running_mean(z2,filter_size)
-        u3 = u3[75:-75]
-        u3 = self.running_mean(u3,filter_size)
+        z2 = lfilter(b, [1.0], z2)
+        #z2 = self.running_mean(z2,filter_size)
         z3 = z3[75:-75]
-        z3 = self.running_mean(z3,filter_size)
+        z3 = lfilter(b, [1.0], z3)
+        #z3 = self.running_mean(z3,filter_size)
         #Training Set
         U, Y = np.array(u1) , np.array(z1)
 
@@ -449,7 +451,7 @@ class _Froe(object):
         plt.ylabel('output')
         plt.show()
 
-        plt.show()
+        #plt.show()
         '''
         #95% confidence
         confidence1 = np.full(shape = (yDimVal1), fill_value = (1.96 / np.sqrt(yDimVal1)) , dtype = np.float64)
