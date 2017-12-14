@@ -48,7 +48,7 @@ extern "C" {
   #define GYRO_ODR 26.0f
   #define MAGNETO_ODR 20.0f
   #define PRESSURE_ODR 25.0f
-  #define DATA_PERIOD_MS     (40)
+  #define DATA_PERIOD_MS     (2)
 
 #elif defined( SAMPLING_50Hz)
   #define DEFAULT_uhCCR1_Val 190
