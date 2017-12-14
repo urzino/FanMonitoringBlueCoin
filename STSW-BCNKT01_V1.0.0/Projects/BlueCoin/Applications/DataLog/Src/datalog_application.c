@@ -194,18 +194,6 @@ DrvStatusTypeDef getSensorsData(T_SensorsData *mptr)
 }
 
 
-void print_readme() {
-	FIL readme;
-	char file_name[30] = "readme.txt";
-	char text[] = "Dalla Longa Milani Urzino";
-	uint32_t byteswritten;
-
-	f_open(&readme, (char const*) file_name, 0x02 | 0x08);
-	f_write(&readme, (const void*) &text, sizeof(text) - 1,
-			(void *) &byteswritten);
-	f_close(&readme);
-}
-
 /**
   * @}
   */

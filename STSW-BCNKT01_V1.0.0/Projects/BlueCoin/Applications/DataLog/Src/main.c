@@ -72,6 +72,9 @@ osPoolDef(sensorPool, DATAQUEUE_SIZE, T_SensorsData);
 osSemaphoreId readDataSem_id;
 osSemaphoreDef(readDataSem);
 
+osSemaphoreId stopReadDataSem_id;
+osSemaphoreDef(stopReadDataSem);
+
 /* LoggingInterface = USB_Datalog  --> Save sensors data on SDCard (enable with double click) */
 /* LoggingInterface = SDCARD_Datalog  --> Send sensors data via USB */
 LogInterface_TypeDef LoggingInterface = SDCARD_Datalog;
@@ -124,25 +127,26 @@ int main(void) {
 
 	SystemClock_Config();
 
+	BSP_LED_Init(LED1);
+	BSP_LED_Off(LED1);
 	BSP_LED_Init(LED2);
 	BSP_LED_Off(LED2);
+	BSP_LED_Init(LED3);
+	BSP_LED_Off(LED3);
 	BSP_LED_Init(LED4);
 	BSP_LED_Off(LED4);
 	BSP_LED_Init(LED5);
 	BSP_LED_Off(LED5);
+	BSP_LED_Init(LED6);
+	BSP_LED_Off(LED6);
 	BSP_LED_Init(LED7);
 	BSP_LED_Off(LED7);
+	BSP_LED_Init(LED8);
+	BSP_LED_Off(LED8);
 
 	BSP_PB_Init(BUTTON_2, BUTTON_MODE_EXTI);
 
 	BSP_ChrgPin_Init();
-	BSP_BatMS_Init();
-	BSP_BatMS_Enable();
-
-	if (LoggingInterface == SDCARD_Datalog) {
-		BSP_LED_Init(LED1);
-		BSP_LED_Off(LED1);
-	}
 
 	BSP_PB_Init(BUTTON_1, BUTTON_MODE_EXTI);
 
@@ -150,25 +154,18 @@ int main(void) {
 	BSP_ShutDown_Init();
 
 	t_coin = HAL_GetTick();
-	BSP_LED_On(LED2);
+
 	HAL_Delay(900);
-	BSP_LED_Off(LED2);
-
-
 
 	BSP_SD_Detect_Init();
 
 	while (!BSP_SD_IsDetected()) {
-		/* Go to Sleep */
-		__WFI();
+		/* LED On */
+		BSP_LED_On(LED1);
 	}
+	BSP_LED_Off(LED1);
 	HAL_Delay(200);
 	DATALOG_SD_Init();
-
-	/* Configure Power Voltage Detector(PVD) to detect if battery voltage is low */
-	PVD_Config();
-
-	print_readme();
 
 	/* Thread 1 definition */
 	osThreadDef(THREAD_1, GetData_Thread, osPriorityAboveNormal, 0,
@@ -188,9 +185,20 @@ int main(void) {
 	osKernelStart();
 
 	/* We should never get here as control is now taken by the scheduler */
+	BSP_LED_On(LED1);
 	for (;;)
 		;
 
+}
+
+void blink(int LED){
+	BSP_LED_Toggle(LED);
+	HAL_Delay(100);
+	BSP_LED_Toggle(LED);
+	HAL_Delay(100);
+	BSP_LED_Toggle(LED);
+	HAL_Delay(100);
+	BSP_LED_Toggle(LED);
 }
 
 /**
@@ -209,6 +217,9 @@ static void GetData_Thread(void const *argument) {
 	readDataSem_id = osSemaphoreCreate(osSemaphore(readDataSem), 1);
 	osSemaphoreWait(readDataSem_id, osWaitForever);
 
+	stopReadDataSem_id = osSemaphoreCreate(osSemaphore(stopReadDataSem), 1);
+	osSemaphoreWait(stopReadDataSem_id, osWaitForever);
+
 	/* Initialize and Enable the available sensors */
 	initializeAllSensors();
 	enableAllSensors();
@@ -216,13 +227,15 @@ static void GetData_Thread(void const *argument) {
 	for (;;) {
 		osSemaphoreWait(readDataSem_id, osWaitForever);
 		if (BUTTONInterrupt && LoggingInterface == SDCARD_Datalog) {
-			BUTTONInterrupt = 0;
 			if (SD_Log_Enabled) {
 				dataTimerStop();
 				osMessagePut(dataQueue_id, 0x00000007, osWaitForever);
+				osSemaphoreWait(stopReadDataSem_id, osWaitForever);
 			} else {
+				blink(LED4);
 				osMessagePut(dataQueue_id, 0x00000007, osWaitForever);
 			}
+			BUTTONInterrupt = 0;
 		} else {
 			/* Try to allocate a memory block and check if is not NULL */
 			mptr = osPoolAlloc(sensorPool_id);
@@ -241,28 +254,6 @@ static void GetData_Thread(void const *argument) {
 				Error_Handler();
 			}
 		}
-
-		/* If the battery is too low close the file and turn off the system */
-		if (BatteryLow) {
-			uint8_t i;
-
-			char data_s[256];
-			int size;
-
-			if (SD_Log_Enabled) {
-				size = sprintf(data_s, "Batteria scarica!");
-				DATALOG_SD_writeBuf(data_s, size);
-				DATALOG_SD_Log_Disable();
-			}
-
-			for (i = 0; i < 8; i++) {
-				BSP_LED_On((Led_TypeDef) i);
-				osDelay(50);
-				BSP_LED_Off((Led_TypeDef) i);
-			}
-			BSP_ShutDown();
-		}
-
 	}
 }
 
@@ -284,11 +275,11 @@ static void WriteData_Thread(void const *argument) {
 			if (evt.value.v == 0x00000007)  // Start/Stop message
 					{
 				if (SD_Log_Enabled) {
+					blink(LED6);
 					DATALOG_SD_Log_Disable();
 					SD_Log_Enabled = 0;
-					BSP_LED_Off(LED1);
+					osSemaphoreRelease(stopReadDataSem_id);
 				} else {
-					BSP_LED_On(LED1);
 					while (SD_Log_Enabled != 1) {
 						if (DATALOG_SD_Log_Enable()) {
 							SD_Log_Enabled = 1;
@@ -303,8 +294,6 @@ static void WriteData_Thread(void const *argument) {
 			{
 				rptr = evt.value.p;
 
-				BSP_LED_On(LED5);
-
 				size = sprintf(data_s, "%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\r\n",
 						(int) rptr->ms_counter, (int) rptr->acc.AXIS_X,
 						(int) rptr->acc.AXIS_Y, (int) rptr->acc.AXIS_Z,
@@ -313,8 +302,6 @@ static void WriteData_Thread(void const *argument) {
 						(int) rptr->mag.AXIS_Y, (int) rptr->mag.AXIS_Z);
 				osPoolFree(sensorPool_id, rptr); // free memory allocated for message
 				DATALOG_SD_writeBuf(data_s, size);
-
-				BSP_LED_Off(LED5);
 			}
 		}
 	}
@@ -329,10 +316,10 @@ void vApplicationIdleHook(void) {
 	if (LoggingInterface == SDCARD_Datalog) {
 		if (Tick - LastLedTick > Threshold) {
 			if (Threshold == 950) {
-				BSP_LED_On(LED4);
+				BSP_LED_On(LED1);
 				Threshold = 50;
 			} else {
-				BSP_LED_Off(LED4);
+				BSP_LED_Off(LED1);
 				Threshold = 950;
 			}
 			LastLedTick = Tick;
@@ -531,7 +518,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		BSP_SD_IsDetected();
 	} else if (GPIO_Pin == CHRG_PIN) {
 		BSP_SetLastChrgTick(HAL_GetTick());
-		BSP_LED_Toggle(LED7);
 	} else if (GPIO_Pin == BUTTON_1_PIN) {
 		if (HAL_GetTick() - t_coin > 4000) {
 			BSP_ShutDown();

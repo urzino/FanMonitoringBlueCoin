@@ -118,4 +118,5 @@
 			<resource resourceType="PROJECT" workspacePath="/STM32446E_EVAL"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>
