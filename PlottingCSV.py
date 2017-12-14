@@ -48,34 +48,47 @@ def plotCSV():
             csvfile.close()
 
         filter_size=6
-        accX = accX[75:-75]
-        #accX = running_mean(accX,filter_size)
+        preprocessing_cut = 800
+        postfilter_cut = 50
+
+        accX = accX[preprocessing_cut:-preprocessing_cut]
         accX = lfilter(b, [1.0], accX)
-        accY = accY[75:-75]
+        accX = accX[postfilter_cut:]
+
+        accY = accY[preprocessing_cut:-preprocessing_cut]
         accY = lfilter(b, [1.0], accY)
-        #accY = running_mean(accY,filter_size)
-        accZ = accZ[75:-75]
-        #accZ = running_mean(accZ,filter_size)
+        accY = accY[postfilter_cut:]
+
+        accZ = accZ[preprocessing_cut:-preprocessing_cut]
         accZ = lfilter(b, [1.0], accZ)
-        GyroX = GyroX[75:-75]
-        #GyroX = running_mean(GyroX,filter_size)
+        accZ = accZ[postfilter_cut:]
+
+        GyroX = GyroX[preprocessing_cut:-preprocessing_cut]
         GyroX = lfilter(b, [1.0], GyroX)
-        GyroY = GyroY[75:-75]
-        #GyroY = running_mean(GyroY,filter_size)
+        GyroX = GyroX[postfilter_cut:]
+
+        GyroY = GyroY[preprocessing_cut:-preprocessing_cut]
         GyroY = lfilter(b, [1.0], GyroY)
-        GyroZ = GyroZ[75:-75]
+        GyroY = GyroY[postfilter_cut:]
+
+        GyroZ = GyroZ[preprocessing_cut:-preprocessing_cut]
         GyroZ = lfilter(b, [1.0], GyroZ)
-        #GyroZ = running_mean(GyroZ,filter_size)
-        MagX = MagX[75:-75]
+        GyroZ = GyroZ[postfilter_cut:]
+
+        MagX = MagX[preprocessing_cut:-preprocessing_cut]
         MagX = lfilter(b, [1.0], MagX)
-        #MagX = running_mean(MagX,filter_size)
-        MagY = MagY[75:-75]
-        #MagY = running_mean(MagY,filter_size)
+        MagX = MagX[postfilter_cut:]
+
+        MagY = MagY[preprocessing_cut:-preprocessing_cut]
         MagY = lfilter(b, [1.0], MagY)
-        MagZ = MagZ[75:-75]
-        #MagZ = running_mean(MagZ,filter_size)
+        MagY = MagY[postfilter_cut:]
+
+        MagZ = MagZ[preprocessing_cut:-preprocessing_cut]
         MagZ = lfilter(b, [1.0], MagZ)
-        time = time[75:-75]
+        MagZ = MagZ[postfilter_cut:]
+
+        time = time[preprocessing_cut + postfilter_cut:-preprocessing_cut]
+        time = [x - preprocessing_cut - postfilter_cut for x in time]
         #time = time[filter_size-1:]
 
         plt.figure(num=file_path)
