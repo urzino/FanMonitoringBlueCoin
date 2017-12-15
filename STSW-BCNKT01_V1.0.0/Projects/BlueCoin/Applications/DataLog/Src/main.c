@@ -55,6 +55,8 @@
 
 #define DATAQUEUE_SIZE     ((uint32_t)100)
 
+#define ACQUISITION_PERIOD_MS (10000)
+
 typedef enum {
 	THREAD_1 = 0, THREAD_2
 } Thread_TypeDef;
@@ -115,7 +117,13 @@ osTimerDef(SensorTimer, dataTimer_Callback);
 char data_s_prox[32];
 uint32_t exec;
 
-void print_readme();
+void stopAcquisitionTimer_Callback(void const *arg);
+void stopAcquisitionTimerStart(void);
+osTimerId stopAcquisitionTimId;
+osTimerDef(StopAcquisitionTimer, stopAcquisitionTimer_Callback);
+uint32_t myExec;
+
+
 
 /**
  * @brief  Main program
@@ -192,13 +200,16 @@ int main(void) {
 }
 
 void blink(int LED){
-	BSP_LED_Toggle(LED);
-	HAL_Delay(100);
-	BSP_LED_Toggle(LED);
-	HAL_Delay(100);
-	BSP_LED_Toggle(LED);
-	HAL_Delay(100);
-	BSP_LED_Toggle(LED);
+	BSP_LED_On(LED);
+	HAL_Delay(10);
+	BSP_LED_Off(LED);
+//	HAL_Delay(100);
+//	BSP_LED_On(LED);
+//	HAL_Delay(100);
+//	BSP_LED_Off(LED);
+//	BSP_LED_On(LED);
+//	HAL_Delay(100);
+//	BSP_LED_Off(LED);
 }
 
 /**
@@ -278,15 +289,20 @@ static void WriteData_Thread(void const *argument) {
 					blink(LED6);
 					DATALOG_SD_Log_Disable();
 					SD_Log_Enabled = 0;
+					BSP_LED_Off(LED5);
+					osTimerStop(stopAcquisitionTimId);
 					osSemaphoreRelease(stopReadDataSem_id);
 				} else {
 					while (SD_Log_Enabled != 1) {
 						if (DATALOG_SD_Log_Enable()) {
 							SD_Log_Enabled = 1;
+							BSP_LED_On(LED5);
 							osDelay(100);
 							dataTimerStart();
+							stopAcquisitionTimerStart();
 						} else {
 							DATALOG_SD_Log_Disable();
+//							BSP_LED_On(LED1); // Something's wrong
 						}
 					}
 				}
@@ -345,8 +361,26 @@ void dataTimerStart(void) {
 	}
 }
 
+
 void dataTimerStop(void) {
 	osTimerStop(sensorTimId);
+}
+
+void stopAcquisitionTimer_Callback(void const *args){
+	BUTTONInterrupt=1;
+}
+
+void stopAcquisitionTimerStart(void){
+	osStatus status;
+
+	myExec = 1;
+	stopAcquisitionTimId = osTimerCreate(osTimer(StopAcquisitionTimer), osTimerOnce, &myExec);
+	if (stopAcquisitionTimId) {
+			status = osTimerStart(stopAcquisitionTimId, ACQUISITION_PERIOD_MS);
+			if (status != osOK) {
+				/* Timer could not be started */
+			}
+		}
 }
 
 /**
@@ -439,6 +473,7 @@ void Battery_Handler(void) {
  */
 static void Error_Handler(void) {
 	while (1) {
+		BSP_LED_On(LED1);
 	}
 }
 
