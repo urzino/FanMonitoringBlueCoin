@@ -1,4 +1,5 @@
 import scipy.io as sio
+from scipy.signal import lfilter
 import numpy as np
 from matplotlib import pyplot as plt
 import itertools as it
@@ -17,8 +18,8 @@ class _Froe(object):
         self.nY= args.ny if args.ny != None else 10
         self.polDegree = args.deg if args.deg != None else 3
         self.inclBias = args.incbias if args.incbias != None else True
-        self.varianceToExplain1 = args.var1 if args.var1 != None else 0.99999
-        self.varianceToExplain2 = args.var2 if args.var2 != None else 0.99976
+        self.varianceToExplain1 = args.var1 if args.var1 != None else 0.9996
+        self.varianceToExplain2 = args.var2 if args.var2 != None else 0.9999
         self.convergenceThresholdNARMAX = args.convth if args.convth != None else 0.2
         self.maxIterationsNARMAX = args.maxit if args.maxit != None else 10
 
@@ -277,46 +278,49 @@ class _Froe(object):
         u1 = []
         u2=[]
         u3=[]
-        with open('Logs/buono1.csv','r') as csvfile:
+
+        dataToAnalyze = 2
+
+        with open('Logs/buono3.csv','r') as csvfile:
             next(csvfile, None);
             plots = csv.reader(csvfile, delimiter=',')
-            i = 0
             for row in plots:
-                i += 1
-                z1.append(int(row[1]))
+                z1.append(int(row[dataToAnalyze]))
             csvfile.close()
 
-        with open('Logs/buono2.csv','r') as csvfile:
+        with open('Logs/buono4.csv','r') as csvfile:
             next(csvfile, None);
             plots = csv.reader(csvfile, delimiter=',')
-            i = 0
             for row in plots:
-                i += 1
-                z2.append(int(row[1]))
+                z2.append(int(row[dataToAnalyze]))
             csvfile.close()
 
-        with open('Logs/cattivo1.csv','r') as csvfile:
+        with open('Logs/cattivoCartaSotto.csv','r') as csvfile:
             next(csvfile, None);
             plots = csv.reader(csvfile, delimiter=',')
-            i = 0
             for row in plots:
-                i += 1
-                z3.append(int(row[1]))
+                z3.append(int(row[dataToAnalyze]))
             csvfile.close()
+
+
+        b = [0.000921992213781247, 0.00335702792571534, 0.00666846411080491, 0.00755286336642893, 0.00103278035537582, -0.0154786656220236, -0.0369577564468621, -0.0489939394790694, -0.0332613413754055, 0.0208964377504099, 0.105771877241975, 0.194080920241419, 0.250550621094879, 0.250550621094879, 0.194080920241419, 0.105771877241975, 0.0208964377504099, -0.0332613413754055, -0.0489939394790694, -0.0369577564468621, -0.0154786656220236, 0.00103278035537582, 0.00755286336642893, 0.00666846411080491, 0.00335702792571534, 0.000921992213781247]
 
         filter_size=6
-        u1 = u1[75:-75]
-        u1 = self.running_mean(u1,filter_size)
-        z1 = z1[75:-75]
-        z1 = self.running_mean(z1,filter_size)
-        u2 = u2[75:-75]
-        u2 = self.running_mean(u2,filter_size)
-        z2 = z2[75:-75]
-        z2 = self.running_mean(z2,filter_size)
-        u3 = u3[75:-75]
-        u3 = self.running_mean(u3,filter_size)
-        z3 = z3[75:-75]
-        z3 = self.running_mean(z3,filter_size)
+        preprocessing_cut = 800
+        postfilter_cut = 50
+
+        z1 = z1[preprocessing_cut:-preprocessing_cut]
+        z1 = lfilter(b, [1.0], z1)
+        z1 = z1[postfilter_cut:]
+
+        z2 = z2[preprocessing_cut:-preprocessing_cut]
+        z2 = lfilter(b, [1.0], z2)
+        z2 = z2[postfilter_cut:]
+
+        z3 = z3[preprocessing_cut:-preprocessing_cut]
+        z3 = lfilter(b, [1.0], z3)
+        z3 = z3[postfilter_cut:]
+
         #Training Set
         U, Y = np.array(u1) , np.array(z1)
 
@@ -365,13 +369,13 @@ class _Froe(object):
         if (not YhatPredictionIde is None):
             residualsPredictionIde = self.calcResiduals(Y, YhatPredictionIde, yDimIde)
             msePredictionIde = self.calcMSE(residualsPredictionIde, yDimIde)
-
+            '''
             #Simulation results on identification set
             YhatSimulationIde = self.generateYhat(1, U, Y, residualsPredictionIde, ThetaSelected, polDegree, inclBias, yDimIde, nU, nY, nE)
             if (not YhatSimulationIde is None):
                 residualsSimulationIde = self.calcResiduals(Y, YhatSimulationIde, yDimIde)
                 mseSimulationIde = self.calcMSE(residualsSimulationIde, yDimIde)
-
+            '''
         if (not YhatPredictionIde is None):
             print("MSPE" , msePredictionIde, "\n")
         if (not YhatSimulationIde is None):
@@ -384,13 +388,13 @@ class _Froe(object):
         if (not YhatPredictionVal1 is None):
             residualsPredictionVal1 = self.calcResiduals(Yval1, YhatPredictionVal1, yDimVal1)
             msePredictionVal1 = self.calcMSE(residualsPredictionVal1, yDimVal1)
-
+            '''
             #Simulation results on validation set 1
             YhatSimulationVal1 = self.generateYhat(1, Uval1, Yval1, residualsPredictionVal1, ThetaSelected, polDegree, inclBias, yDimVal1, nU, nY, nE)
             if (not YhatSimulationVal1 is None):
                 residualsSimulationVal1 = self.calcResiduals(Yval1, YhatSimulationVal1, yDimVal1)
                 mseSimulationVal1 = self.calcMSE(residualsSimulationVal1, yDimVal1)
-
+            '''
         if (not YhatPredictionVal1 is None):
             print("MSPE" , msePredictionVal1, "\n")
         if (not YhatSimulationVal1 is None):
@@ -403,13 +407,13 @@ class _Froe(object):
         if (not YhatPredictionVal2 is None):
             residualsPredictionVal2 = self.calcResiduals(Yval2, YhatPredictionVal2, yDimVal2)
             msePredictionVal2 = self.calcMSE(residualsPredictionVal2, yDimVal2)
-
+            '''
             #Simulation results on validation set 2
             YhatSimulationVal2 = self.generateYhat(1, Uval2, Yval2, residualsPredictionVal2, ThetaSelected, polDegree, inclBias, yDimVal2, nU, nY, nE)
             if (not YhatSimulationVal2 is None):
                 residualsSimulationVal2 = self.calcResiduals(Yval2, YhatSimulationVal2, yDimVal2)
                 mseSimulationVal2 = self.calcMSE(residualsSimulationVal2, yDimVal2)
-
+            '''
         if (not YhatPredictionVal2 is None):
             print("MSPE" , msePredictionVal2, "\n")
         if (not YhatSimulationVal2 is None):
@@ -417,39 +421,39 @@ class _Froe(object):
 
 
         plt.subplot("311")
-        plt.plot(Y, color = "red")
+        plt.plot(Y[30:], color = "red")
         if (not YhatPredictionIde is None):
-            plt.plot(YhatPredictionIde, color = "blue")
+            plt.plot(YhatPredictionIde[30:], color = "blue")
         if (not YhatSimulationIde is None):
-            plt.plot(YhatSimulationIde, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Identification Set')
+            plt.plot(YhatSimulationIde[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Identification Set
         plt.xlabel('time')
         plt.ylabel('output')
 
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot('312')
-        plt.plot(Yval1, color = "red")
+        plt.plot(Yval1[30:], color = "red")
         if (not YhatPredictionVal1 is None):
-            plt.plot(YhatPredictionVal1, color = "blue")
+            plt.plot(YhatPredictionVal1[30:], color = "blue")
         if (not YhatSimulationVal1 is None):
-            plt.plot(YhatSimulationVal1, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Validation Set 1')
+            plt.plot(YhatSimulationVal1[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 1
         plt.xlabel('time')
         plt.ylabel('output')
 
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot('313')
-        plt.plot(Yval2, color = "red")
+        plt.plot(Yval2[30:], color = "red")
         if (not YhatPredictionVal2 is None):
-            plt.plot(YhatPredictionVal2, color = "blue")
+            plt.plot(YhatPredictionVal2[30:], color = "blue")
         if (not YhatSimulationVal2 is None):
-            plt.plot(YhatSimulationVal2, color = "green")
-        plt.title('Y (red) / Y predicted (blue) / Y simulated (green) - Validation Set 2')
+            plt.plot(YhatSimulationVal2[30:], color = "green")
+        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 2
         plt.xlabel('time')
         plt.ylabel('output')
         plt.show()
 
-        plt.show()
+        #plt.show()
         '''
         #95% confidence
         confidence1 = np.full(shape = (yDimVal1), fill_value = (1.96 / np.sqrt(yDimVal1)) , dtype = np.float64)

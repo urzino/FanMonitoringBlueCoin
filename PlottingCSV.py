@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from scipy.signal import lfilter
 import csv
 import sys
 import os
@@ -12,6 +13,7 @@ def running_mean(x, N):
     return (cumsum[N:] - cumsum[:-N]) / float(N)
 
 def plotCSV():
+    b = [0.000921992213781247, 0.00335702792571534, 0.00666846411080491, 0.00755286336642893, 0.00103278035537582, -0.0154786656220236, -0.0369577564468621, -0.0489939394790694, -0.0332613413754055, 0.0208964377504099, 0.105771877241975, 0.194080920241419, 0.250550621094879, 0.250550621094879, 0.194080920241419, 0.105771877241975, 0.0208964377504099, -0.0332613413754055, -0.0489939394790694, -0.0369577564468621, -0.0154786656220236, 0.00103278035537582, 0.00755286336642893, 0.00666846411080491, 0.00335702792571534, 0.000921992213781247]
 
     logs = [name for name in os.listdir('Logs') if os.path.splitext(name)[1] == '.csv']
 
@@ -46,26 +48,48 @@ def plotCSV():
             csvfile.close()
 
         filter_size=6
-        accX = accX[75:-75]
-        accX = running_mean(accX,filter_size)
-        accY = accY[75:-75]
-        accY = running_mean(accY,filter_size)
-        accZ = accZ[75:-75]
-        accZ = running_mean(accZ,filter_size)
-        GyroX = GyroX[75:-75]
-        GyroX = running_mean(GyroX,filter_size)
-        GyroY = GyroY[75:-75]
-        GyroY = running_mean(GyroY,filter_size)
-        GyroZ = GyroZ[75:-75]
-        GyroZ = running_mean(GyroZ,filter_size)
-        MagX = MagX[75:-75]
-        MagX = running_mean(MagX,filter_size)
-        MagY = MagY[75:-75]
-        MagY = running_mean(MagY,filter_size)
-        MagZ = MagZ[75:-75]
-        MagZ = running_mean(MagZ,filter_size)
-        time = time[75:-75]
-        time = time[filter_size-1:]
+        preprocessing_cut = 800
+        postfilter_cut = 50
+
+        accX = accX[preprocessing_cut:-preprocessing_cut]
+        accX = lfilter(b, [1.0], accX)
+        accX = accX[postfilter_cut:]
+
+        accY = accY[preprocessing_cut:-preprocessing_cut]
+        accY = lfilter(b, [1.0], accY)
+        accY = accY[postfilter_cut:]
+
+        accZ = accZ[preprocessing_cut:-preprocessing_cut]
+        accZ = lfilter(b, [1.0], accZ)
+        accZ = accZ[postfilter_cut:]
+
+        GyroX = GyroX[preprocessing_cut:-preprocessing_cut]
+        GyroX = lfilter(b, [1.0], GyroX)
+        GyroX = GyroX[postfilter_cut:]
+
+        GyroY = GyroY[preprocessing_cut:-preprocessing_cut]
+        GyroY = lfilter(b, [1.0], GyroY)
+        GyroY = GyroY[postfilter_cut:]
+
+        GyroZ = GyroZ[preprocessing_cut:-preprocessing_cut]
+        GyroZ = lfilter(b, [1.0], GyroZ)
+        GyroZ = GyroZ[postfilter_cut:]
+
+        MagX = MagX[preprocessing_cut:-preprocessing_cut]
+        MagX = lfilter(b, [1.0], MagX)
+        MagX = MagX[postfilter_cut:]
+
+        MagY = MagY[preprocessing_cut:-preprocessing_cut]
+        MagY = lfilter(b, [1.0], MagY)
+        MagY = MagY[postfilter_cut:]
+
+        MagZ = MagZ[preprocessing_cut:-preprocessing_cut]
+        MagZ = lfilter(b, [1.0], MagZ)
+        MagZ = MagZ[postfilter_cut:]
+
+        time = time[preprocessing_cut + postfilter_cut:-preprocessing_cut]
+        time = [x - preprocessing_cut - postfilter_cut for x in time]
+        #time = time[filter_size-1:]
 
         plt.figure(num=file_path)
 
