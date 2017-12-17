@@ -49,6 +49,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "datalog_application.h"
+#include "usbd_cdc_interface.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -203,13 +204,10 @@ void blink(int LED){
 	BSP_LED_On(LED);
 	HAL_Delay(10);
 	BSP_LED_Off(LED);
-//	HAL_Delay(100);
-//	BSP_LED_On(LED);
-//	HAL_Delay(100);
-//	BSP_LED_Off(LED);
-//	BSP_LED_On(LED);
-//	HAL_Delay(100);
-//	BSP_LED_Off(LED);
+	HAL_Delay(10);
+	BSP_LED_On(LED);
+	HAL_Delay(10);
+	BSP_LED_Off(LED);
 }
 
 /**
@@ -256,12 +254,30 @@ static void GetData_Thread(void const *argument) {
 					/* Push the new memory Block in the Data Queue */
 					if (osMessagePut(dataQueue_id, (uint32_t) mptr,
 					osWaitForever) != osOK) {
+						BSP_LED_Off(LED1);
+						BSP_LED_Off(LED4);
+						BSP_LED_Off(LED6);
+						BSP_LED_Off(LED5);
+						BSP_LED_On(LED2);
 						Error_Handler();
 					}
 				} else {
+					BSP_LED_Off(LED1);
+					BSP_LED_Off(LED4);
+					BSP_LED_Off(LED6);
+					BSP_LED_Off(LED5);
+					BSP_LED_On(LED2);
+					BSP_LED_On(LED3);
 					Error_Handler();
 				}
 			} else {
+				BSP_LED_Off(LED1);
+				BSP_LED_Off(LED4);
+				BSP_LED_Off(LED6);
+				BSP_LED_Off(LED5);
+				BSP_LED_On(LED1);
+				BSP_LED_On(LED2);
+				BSP_LED_On(LED3);
 				Error_Handler();
 			}
 		}
@@ -302,7 +318,6 @@ static void WriteData_Thread(void const *argument) {
 							stopAcquisitionTimerStart();
 						} else {
 							DATALOG_SD_Log_Disable();
-//							BSP_LED_On(LED1); // Something's wrong
 						}
 					}
 				}
@@ -462,8 +477,6 @@ void Battery_Handler(void) {
 
 	status = BSP_GetChrgStatus();
 	BSP_GetVoltage(&Voltage);
-
-
 }
 
 /**
@@ -473,7 +486,15 @@ void Battery_Handler(void) {
  */
 static void Error_Handler(void) {
 	while (1) {
-		BSP_LED_On(LED1);
+		BSP_LED_Toggle(LED1);
+		BSP_LED_Toggle(LED2);
+		BSP_LED_Toggle(LED3);
+		BSP_LED_Toggle(LED4);
+		BSP_LED_Toggle(LED5);
+		BSP_LED_Toggle(LED6);
+		BSP_LED_Toggle(LED7);
+		BSP_LED_Toggle(LED8);
+		HAL_Delay(1000);
 	}
 }
 
