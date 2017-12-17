@@ -50,6 +50,7 @@
 #include "cmsis_os.h"
 #include "datalog_application.h"
 #include "usbd_cdc_interface.h"
+#include "stdbool.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -85,7 +86,6 @@ LogInterface_TypeDef LoggingInterface = SDCARD_Datalog;
 USBD_HandleTypeDef USBD_Device;
 static volatile uint8_t BUTTONInterrupt = 0;
 volatile uint8_t no_VL53L0X = 0;
-volatile uint8_t BatteryLow = 0;
 
 void *LSM6DSM_X_0_handle = NULL;
 void *LSM6DSM_G_0_handle = NULL;
@@ -98,9 +98,11 @@ void *VL53L0X_0_handler = NULL;
 void SystemClock_Config(void);
 
 /* Private function prototypes -----------------------------------------------*/
+static void show_error_code(int code);
+static void leds_off(void);
+
 static void GetData_Thread(void const *argument);
 static void WriteData_Thread(void const *argument);
-void Battery_Handler(void);
 
 static void Error_Handler(void);
 static void initializeAllSensors(void);
@@ -124,7 +126,7 @@ osTimerId stopAcquisitionTimId;
 osTimerDef(StopAcquisitionTimer, stopAcquisitionTimer_Callback);
 uint32_t myExec;
 
-
+void smile(void);
 
 /**
  * @brief  Main program
@@ -137,21 +139,15 @@ int main(void) {
 	SystemClock_Config();
 
 	BSP_LED_Init(LED1);
-	BSP_LED_Off(LED1);
 	BSP_LED_Init(LED2);
-	BSP_LED_Off(LED2);
 	BSP_LED_Init(LED3);
-	BSP_LED_Off(LED3);
 	BSP_LED_Init(LED4);
-	BSP_LED_Off(LED4);
 	BSP_LED_Init(LED5);
-	BSP_LED_Off(LED5);
 	BSP_LED_Init(LED6);
-	BSP_LED_Off(LED6);
 	BSP_LED_Init(LED7);
-	BSP_LED_Off(LED7);
 	BSP_LED_Init(LED8);
-	BSP_LED_Off(LED8);
+
+	leds_off();
 
 	BSP_PB_Init(BUTTON_2, BUTTON_MODE_EXTI);
 
@@ -169,10 +165,12 @@ int main(void) {
 	BSP_SD_Detect_Init();
 
 	while (!BSP_SD_IsDetected()) {
-		/* LED On */
-		BSP_LED_On(LED1);
+		// Error code no sd found
+		show_error_code(0x01);
 	}
-	BSP_LED_Off(LED1);
+
+	smile();
+
 	HAL_Delay(200);
 	DATALOG_SD_Init();
 
@@ -194,19 +192,32 @@ int main(void) {
 	osKernelStart();
 
 	/* We should never get here as control is now taken by the scheduler */
-	BSP_LED_On(LED1);
-	for (;;)
-		;
+	show_error_code(0xFF);
+	Error_Handler();
 
+}
+
+void smile(void){
+	show_error_code(0xEA);
+	HAL_Delay(250);
+	show_error_code(0xE2);
+	HAL_Delay(250);
+	show_error_code(0xEA);
+	HAL_Delay(250);
+	show_error_code(0xE2);
+	HAL_Delay(250);
+	show_error_code(0xEA);
+	HAL_Delay(250);
+	leds_off();
 }
 
 void blink(int LED){
 	BSP_LED_On(LED);
-	HAL_Delay(10);
+	HAL_Delay(100);
 	BSP_LED_Off(LED);
-	HAL_Delay(10);
+	HAL_Delay(100);
 	BSP_LED_On(LED);
-	HAL_Delay(10);
+	HAL_Delay(100);
 	BSP_LED_Off(LED);
 }
 
@@ -254,32 +265,40 @@ static void GetData_Thread(void const *argument) {
 					/* Push the new memory Block in the Data Queue */
 					if (osMessagePut(dataQueue_id, (uint32_t) mptr,
 					osWaitForever) != osOK) {
-						BSP_LED_Off(LED1);
-						BSP_LED_Off(LED4);
-						BSP_LED_Off(LED6);
-						BSP_LED_Off(LED5);
-						BSP_LED_On(LED2);
+						show_error_code(0x83);
 						Error_Handler();
 					}
 				} else {
-					BSP_LED_Off(LED1);
-					BSP_LED_Off(LED4);
-					BSP_LED_Off(LED6);
-					BSP_LED_Off(LED5);
-					BSP_LED_On(LED2);
-					BSP_LED_On(LED3);
+					show_error_code(0x82);
 					Error_Handler();
 				}
 			} else {
-				BSP_LED_Off(LED1);
-				BSP_LED_Off(LED4);
-				BSP_LED_Off(LED6);
-				BSP_LED_Off(LED5);
-				BSP_LED_On(LED1);
-				BSP_LED_On(LED2);
-				BSP_LED_On(LED3);
+				show_error_code(0x44);
 				Error_Handler();
 			}
+		}
+	}
+}
+
+static void leds_off(void){
+	BSP_LED_Off(LED1);
+	BSP_LED_Off(LED2);
+	BSP_LED_Off(LED3);
+	BSP_LED_Off(LED4);
+	BSP_LED_Off(LED5);
+	BSP_LED_Off(LED6);
+	BSP_LED_Off(LED7);
+	BSP_LED_Off(LED8);
+}
+
+static void show_error_code(int code){
+	leds_off();
+	for(int i=7; i>=0; i--){
+		int mask =  1 << i;
+		int masked_code = code & mask;
+		bool thebit = masked_code >> i;
+		if(thebit){
+			BSP_LED_On(i);
 		}
 	}
 }
@@ -399,15 +418,6 @@ void stopAcquisitionTimerStart(void){
 }
 
 /**
- * @brief  PWR PVD interrupt callback
- * @param  None
- * @retval None
- */
-void HAL_PWR_PVDCallback(void) {
-	BatteryLow = 1;
-}
-
-/**
  * @brief  Initialize all sensors
  * @param  None
  * @retval None
@@ -468,15 +478,6 @@ void disableAllSensors(void) {
 	BSP_ACCELERO_Sensor_Disable(LSM303AGR_X_0_handle);
 	BSP_GYRO_Sensor_Disable(LSM6DSM_G_0_handle);
 	BSP_MAGNETO_Sensor_Disable(LSM303AGR_M_0_handle);
-}
-
-void Battery_Handler(void) {
-	ChrgStatus_t status;
-	uint16_t Voltage;
-	char data_s[256];
-
-	status = BSP_GetChrgStatus();
-	BSP_GetVoltage(&Voltage);
 }
 
 /**
