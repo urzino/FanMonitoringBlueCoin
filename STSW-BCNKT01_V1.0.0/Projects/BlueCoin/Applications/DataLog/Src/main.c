@@ -49,7 +49,6 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "datalog_application.h"
-#include "usbd_cdc_interface.h"
 #include "stdbool.h"
 
 /* Private typedef -----------------------------------------------------------*/
@@ -167,12 +166,15 @@ int main(void) {
 	while (!BSP_SD_IsDetected()) {
 		// Error code no sd found
 		show_error_code(0x01);
+		 /* Go to Sleep */
+		__WFI();
+		leds_off();
 	}
-
-	smile();
 
 	HAL_Delay(200);
 	DATALOG_SD_Init();
+
+	smile();
 
 	/* Thread 1 definition */
 	osThreadDef(THREAD_1, GetData_Thread, osPriorityAboveNormal, 0,
@@ -250,6 +252,7 @@ static void GetData_Thread(void const *argument) {
 			if (SD_Log_Enabled) {
 				dataTimerStop();
 				osMessagePut(dataQueue_id, 0x00000007, osWaitForever);
+				/* Wait for the other thread to process this message */
 				osSemaphoreWait(stopReadDataSem_id, osWaitForever);
 			} else {
 				blink(LED4);
@@ -281,14 +284,9 @@ static void GetData_Thread(void const *argument) {
 }
 
 static void leds_off(void){
-	BSP_LED_Off(LED1);
-	BSP_LED_Off(LED2);
-	BSP_LED_Off(LED3);
-	BSP_LED_Off(LED4);
-	BSP_LED_Off(LED5);
-	BSP_LED_Off(LED6);
-	BSP_LED_Off(LED7);
-	BSP_LED_Off(LED8);
+	for (int i=0; i<8; i++){
+		BSP_LED_Off((Led_TypeDef) i);
+	}
 }
 
 static void show_error_code(int code){
@@ -298,7 +296,7 @@ static void show_error_code(int code){
 		int masked_code = code & mask;
 		bool thebit = masked_code >> i;
 		if(thebit){
-			BSP_LED_On(i);
+			BSP_LED_On((Led_TypeDef) i);
 		}
 	}
 }
@@ -320,21 +318,21 @@ static void WriteData_Thread(void const *argument) {
 		if (evt.status == osEventMessage) {
 			if (evt.value.v == 0x00000007)  // Start/Stop message
 					{
-				if (SD_Log_Enabled) {
+				if (SD_Log_Enabled) { // Stop message
 					blink(LED6);
 					DATALOG_SD_Log_Disable();
 					SD_Log_Enabled = 0;
 					BSP_LED_Off(LED5);
 					osTimerStop(stopAcquisitionTimId);
-					osSemaphoreRelease(stopReadDataSem_id);
-				} else {
+					osSemaphoreRelease(stopReadDataSem_id); // Unlock other thread
+				} else { // Start message
 					while (SD_Log_Enabled != 1) {
 						if (DATALOG_SD_Log_Enable()) {
 							SD_Log_Enabled = 1;
 							BSP_LED_On(LED5);
 							osDelay(100);
-							dataTimerStart();
-							stopAcquisitionTimerStart();
+							dataTimerStart(); // Start timer to get the next datum
+							stopAcquisitionTimerStart(); // Start timer for acquisition stop
 						} else {
 							DATALOG_SD_Log_Disable();
 						}
@@ -357,7 +355,7 @@ static void WriteData_Thread(void const *argument) {
 	}
 }
 
-/* Idle task */
+/* Idle task blinking a led to indicate that the software is running */
 void vApplicationIdleHook(void) {
 	static uint32_t LastLedTick;
 	uint32_t Tick = HAL_GetTick();
@@ -400,7 +398,7 @@ void dataTimerStop(void) {
 	osTimerStop(sensorTimId);
 }
 
-void stopAcquisitionTimer_Callback(void const *args){
+void stopAcquisitionTimer_Callback(void const *args){ // This basically simulates a button press
 	BUTTONInterrupt=1;
 }
 
@@ -485,7 +483,7 @@ void disableAllSensors(void) {
  * @param  None
  * @retval None
  */
-static void Error_Handler(void) {
+static void Error_Handler(void) { // Toggle all leds, blinking error code
 	while (1) {
 		BSP_LED_Toggle(LED1);
 		BSP_LED_Toggle(LED2);
