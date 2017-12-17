@@ -12,16 +12,16 @@ import sys
 import csv
 
 class _Froe(object):
-    def __init__(self, args): #init all parameters from terminal or default values
-        self.nE = args.ne if args.ne != None else 0
-        self.nU = args.nu if args.nu != None else 0
-        self.nY= args.ny if args.ny != None else 10
-        self.polDegree = args.deg if args.deg != None else 3
-        self.inclBias = args.incbias if args.incbias != None else True
-        self.varianceToExplain1 = args.var1 if args.var1 != None else 0.9996
-        self.varianceToExplain2 = args.var2 if args.var2 != None else 0.9999
-        self.convergenceThresholdNARMAX = args.convth if args.convth != None else 0.2
-        self.maxIterationsNARMAX = args.maxit if args.maxit != None else 10
+    def __init__(self, args = None): #init all parameters from terminal or default values
+        self.nE = args.ne if args != None and args.ne != None else 0
+        self.nU = args.nu if args != None and args.nu != None else 0
+        self.nY= args.ny if args != None and args.ny != None else 10
+        self.polDegree = args.deg if args != None and args.deg != None else 3
+        self.inclBias = args.incbias if args != None and args.incbias != None else True
+        self.varianceToExplain1 = args.var1 if args != None and args.var1 != None else 0.9996
+        self.varianceToExplain2 = args.var2 if args != None and args.var2 != None else 0.9999
+        self.convergenceThresholdNARMAX = args.convth if args != None and args.convth != None else 0.2
+        self.maxIterationsNARMAX = args.maxit if args != None and args.maxit != None else 10
 
     def running_mean(self, x, N):
         cumsum = np.cumsum(np.insert(x, 0, 0))
@@ -271,14 +271,37 @@ class _Froe(object):
 
         plt.show()
 
-    def run(self): #main algorithm
-        z1 =[]
-        z2= []
-        z3= []
+
+    def calculateModel(self, z1):
+        u1 = []
+        #parameters
+        polDegree = self.polDegree
+        varianceToExplain1 = self.varianceToExplain1
+        varianceToExplain2 = self.varianceToExplain2
+        nU = self.nU
+        nY = self.nY
+        nE = self.nE
+        inclBias = self.inclBias
+        convergenceThresholdNARMAX = self.convergenceThresholdNARMAX
+        maxIterationsNARMAX = self.maxIterationsNARMAX
+        #Training Set
+        U, Y = np.array(u1) , np.array(z1)
+
+        yDimIde = len(Y)
+        uDimIde = len(U)
+
+        print("\nStarting model with the following time delays: U", nU, "Y", nY, "E", nE, "\n")
+
+        ThetaSelected , Model = self.froe(nU, nY, nE, U, Y, np.zeros(shape = (yDimIde), dtype = np.float64), polDegree, yDimIde, inclBias, varianceToExplain1, varianceToExplain2, 0, convergenceThresholdNARMAX, maxIterationsNARMAX)
+
+        print("Model Obtained:\n")
+        print(Model,"\n")
+        return ThetaSelected
+
+    def run(self, z1, z2, ThetaSelected): #main algorithm
         u1 = []
         u2=[]
-        u3=[]
-
+        '''
         dataToAnalyze = 2
 
         with open('Logs/buono3.csv','r') as csvfile:
@@ -320,23 +343,23 @@ class _Froe(object):
         z3 = z3[preprocessing_cut:-preprocessing_cut]
         z3 = lfilter(b, [1.0], z3)
         z3 = z3[postfilter_cut:]
-
+        '''
         #Training Set
         U, Y = np.array(u1) , np.array(z1)
 
         #Validation Set
         Uval1, Yval1 = np.array(u2) , np.array(z2)
-        Uval2, Yval2 = np.array(u3) , np.array(z3)
+        #Uval2, Yval2 = np.array(u3) , np.array(z3)
 
         yDimIde = len(Y)
         uDimIde = len(U)
 
         yDimVal1 = len(Yval1)
         uDimVal1 = len(Uval1)
-
+        '''
         yDimVal2 = len(Yval2)
         uDimVal2 = len(Uval2)
-
+        '''
         #parameters
         polDegree = self.polDegree
         varianceToExplain1 = self.varianceToExplain1
@@ -354,7 +377,7 @@ class _Froe(object):
         YhatSimulationVal1 = None
         YhatPredictionVal2 = None
         YhatSimulationVal2 = None
-
+        '''
         print("\nStarting model with the following time delays: U", nU, "Y", nY, "E", nE, "\n")
 
         ThetaSelected , Model = self.froe(nU, nY, nE, U, Y, np.zeros(shape = (yDimIde), dtype = np.float64), polDegree, yDimIde, inclBias, varianceToExplain1, varianceToExplain2, 0, convergenceThresholdNARMAX, maxIterationsNARMAX)
@@ -363,7 +386,7 @@ class _Froe(object):
         print(Model,"\n")
 
         print("Results on the identification set\n")
-
+        '''
         #Prediction results on identification set
         YhatPredictionIde = self.generateYhat(0, U, Y, np.zeros(shape = (yDimIde), dtype = np.float64), ThetaSelected, polDegree, inclBias, yDimIde, nU, nY, nE)
         if (not YhatPredictionIde is None):
@@ -376,13 +399,14 @@ class _Froe(object):
                 residualsSimulationIde = self.calcResiduals(Y, YhatSimulationIde, yDimIde)
                 mseSimulationIde = self.calcMSE(residualsSimulationIde, yDimIde)
             '''
+        '''
         if (not YhatPredictionIde is None):
             print("MSPE" , msePredictionIde, "\n")
         if (not YhatSimulationIde is None):
             print("MSSE" , mseSimulationIde, "\n")
 
         print("Results on the validation set 1\n")
-
+        '''
         #Prediction results on validation set 1
         YhatPredictionVal1 = self.generateYhat(0, Uval1, Yval1, np.zeros(shape = (yDimVal1), dtype = np.float64), ThetaSelected, polDegree, inclBias, yDimVal1, nU, nY, nE)
         if (not YhatPredictionVal1 is None):
@@ -395,11 +419,14 @@ class _Froe(object):
                 residualsSimulationVal1 = self.calcResiduals(Yval1, YhatSimulationVal1, yDimVal1)
                 mseSimulationVal1 = self.calcMSE(residualsSimulationVal1, yDimVal1)
             '''
+        '''
         if (not YhatPredictionVal1 is None):
             print("MSPE" , msePredictionVal1, "\n")
         if (not YhatSimulationVal1 is None):
             print("MSSE" , mseSimulationVal1, "\n")
+        '''
 
+        '''
         print("Results on the validation set 2\n")
 
         #Prediction results on validation set 2
@@ -407,20 +434,19 @@ class _Froe(object):
         if (not YhatPredictionVal2 is None):
             residualsPredictionVal2 = self.calcResiduals(Yval2, YhatPredictionVal2, yDimVal2)
             msePredictionVal2 = self.calcMSE(residualsPredictionVal2, yDimVal2)
-            '''
             #Simulation results on validation set 2
             YhatSimulationVal2 = self.generateYhat(1, Uval2, Yval2, residualsPredictionVal2, ThetaSelected, polDegree, inclBias, yDimVal2, nU, nY, nE)
             if (not YhatSimulationVal2 is None):
                 residualsSimulationVal2 = self.calcResiduals(Yval2, YhatSimulationVal2, yDimVal2)
                 mseSimulationVal2 = self.calcMSE(residualsSimulationVal2, yDimVal2)
-            '''
         if (not YhatPredictionVal2 is None):
             print("MSPE" , msePredictionVal2, "\n")
         if (not YhatSimulationVal2 is None):
             print("MSSE" , mseSimulationVal2, "\n")
+        '''
 
-
-        plt.subplot("311")
+        '''
+        plt.subplot("211")
         plt.plot(Y[30:], color = "red")
         if (not YhatPredictionIde is None):
             plt.plot(YhatPredictionIde[30:], color = "blue")
@@ -431,7 +457,7 @@ class _Froe(object):
         plt.ylabel('output')
 
         plt.subplots_adjust(hspace = 0.5)
-        plt.subplot('312')
+        plt.subplot('212')
         plt.plot(Yval1[30:], color = "red")
         if (not YhatPredictionVal1 is None):
             plt.plot(YhatPredictionVal1[30:], color = "blue")
@@ -440,7 +466,12 @@ class _Froe(object):
         plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 1
         plt.xlabel('time')
         plt.ylabel('output')
+        plt.show()
+        '''
 
+        return msePredictionVal1 / msePredictionIde
+
+        '''
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot('313')
         plt.plot(Yval2[30:], color = "red")
@@ -454,7 +485,7 @@ class _Froe(object):
         plt.show()
 
         #plt.show()
-        '''
+
         #95% confidence
         confidence1 = np.full(shape = (yDimVal1), fill_value = (1.96 / np.sqrt(yDimVal1)) , dtype = np.float64)
         confidence2 = np.full(shape = (yDimVal2), fill_value = (1.96 / np.sqrt(yDimVal2)) , dtype = np.float64)
