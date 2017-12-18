@@ -57,6 +57,7 @@
 #define DATAQUEUE_SIZE     ((uint32_t)100)
 
 #define ACQUISITION_PERIOD_MS (10000)
+#define START_ACQUISITION_DELAY (2000)
 
 typedef enum {
 	THREAD_1 = 0, THREAD_2
@@ -168,9 +169,9 @@ int main(void) {
 		show_error_code(0x01);
 		 /* Go to Sleep */
 		__WFI();
-		leds_off();
 	}
 
+	leds_off();
 	HAL_Delay(200);
 	DATALOG_SD_Init();
 
@@ -213,13 +214,13 @@ void smile(void){
 	leds_off();
 }
 
-void blink(int LED){
+void blink(int LED){ // This function has to be called inside a FreeRTOS thread
 	BSP_LED_On(LED);
-	HAL_Delay(100);
+	osDelay(100);
 	BSP_LED_Off(LED);
-	HAL_Delay(100);
+	osDelay(100);
 	BSP_LED_On(LED);
-	HAL_Delay(100);
+	osDelay(100);
 	BSP_LED_Off(LED);
 }
 
@@ -328,9 +329,9 @@ static void WriteData_Thread(void const *argument) {
 				} else { // Start message
 					while (SD_Log_Enabled != 1) {
 						if (DATALOG_SD_Log_Enable()) {
+							osDelay(START_ACQUISITION_DELAY);
 							SD_Log_Enabled = 1;
 							BSP_LED_On(LED5);
-							osDelay(100);
 							dataTimerStart(); // Start timer to get the next datum
 							stopAcquisitionTimerStart(); // Start timer for acquisition stop
 						} else {
