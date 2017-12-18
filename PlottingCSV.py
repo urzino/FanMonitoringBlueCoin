@@ -30,7 +30,7 @@ def extractDataFromFile(file_path):
     magY = []
     magZ = []
 
-    with open('Logs/'+file_path,'r') as csvfile:
+    with open('Logs/VentolaGrande/'+file_path,'r') as csvfile:
         next(csvfile, None);
         plots = csv.reader(csvfile, delimiter=',')
         i = 0
@@ -48,44 +48,50 @@ def extractDataFromFile(file_path):
             magZ.append(int(row[9]))
         csvfile.close()
 
-    preprocessing_cut = 800
+    preprocessing_cut = 0
     postfilter_cut = 50
 
-    accX = accX[preprocessing_cut:-preprocessing_cut]
+    if preprocessing_cut > 0:
+        accX = accX[preprocessing_cut:-preprocessing_cut]
+        accY = accY[preprocessing_cut:-preprocessing_cut]
+        accZ = accZ[preprocessing_cut:-preprocessing_cut]
+        gyroX = gyroX[preprocessing_cut:-preprocessing_cut]
+        gyroY = gyroY[preprocessing_cut:-preprocessing_cut]
+        gyroZ = gyroZ[preprocessing_cut:-preprocessing_cut]
+        magX = magX[preprocessing_cut:-preprocessing_cut]
+        magY = magY[preprocessing_cut:-preprocessing_cut]
+        magZ = magZ[preprocessing_cut:-preprocessing_cut]
+        time = time[preprocessing_cut + postfilter_cut:-preprocessing_cut]
+    else:
+        time = time[postfilter_cut:]
+
     accX = filterData(accX, postfilter_cut)
 
-    accY = accY[preprocessing_cut:-preprocessing_cut]
     accY = filterData(accY, postfilter_cut)
 
-    accZ = accZ[preprocessing_cut:-preprocessing_cut]
     accZ = filterData(accZ, postfilter_cut)
 
-    gyroX = gyroX[preprocessing_cut:-preprocessing_cut]
     gyroX = filterData(gyroX, postfilter_cut)
 
-    gyroY = gyroY[preprocessing_cut:-preprocessing_cut]
     gyroY = filterData(gyroY, postfilter_cut)
 
-    gyroZ = gyroZ[preprocessing_cut:-preprocessing_cut]
     gyroZ = filterData(gyroZ, postfilter_cut)
 
-    magX = magX[preprocessing_cut:-preprocessing_cut]
     magX = filterData(magX, postfilter_cut)
 
-    magY = magY[preprocessing_cut:-preprocessing_cut]
     magY = filterData(magY, postfilter_cut)
 
-    magZ = magZ[preprocessing_cut:-preprocessing_cut]
     magZ = filterData(magZ, postfilter_cut)
 
-    time = time[preprocessing_cut + postfilter_cut:-preprocessing_cut]
+
     time = [x - preprocessing_cut - postfilter_cut for x in time]
 
     return [accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ, time]
 
 def calculateTheta(i, data):
+    varianceToExplain = [0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997]
     froe = FroeAlgorithm()
-    theta = froe.calculateModel(data)
+    theta = froe.calculateModel(data, varianceToExplain[i])
     np.save('Models/model_' + str(i), theta)
 
 def calculateModels():
@@ -103,7 +109,7 @@ def plotCSV():
 
     dataBuono = extractDataFromFile('buono1.csv')
 
-    logs = [name for name in os.listdir('Logs') if os.path.splitext(name)[1] == '.csv']
+    logs = [name for name in os.listdir('Logs/VentolaGrande/') if os.path.splitext(name)[1] == '.csv']
 
     dataNames = ["AccX","AccY","AccZ","GyroX","GyroY","GyroZ","MagX","MagY","MagZ"]
 
@@ -169,4 +175,5 @@ if __name__ == "__main__":
     models = [name for name in os.listdir('Models') if os.path.splitext(name)[1] == '.npy']
     if len(models) < 9:
         calculateModels()
-    plotCSV()
+    else:
+        plotCSV()

@@ -18,7 +18,7 @@ class _Froe(object):
         self.nY= args.ny if args != None and args.ny != None else 10
         self.polDegree = args.deg if args != None and args.deg != None else 3
         self.inclBias = args.incbias if args != None and args.incbias != None else True
-        self.varianceToExplain1 = args.var1 if args != None and args.var1 != None else 0.9996
+        self.varianceToExplain1 = args.var1 if args != None and args.var1 != None else 0.99973
         self.varianceToExplain2 = args.var2 if args != None and args.var2 != None else 0.9999
         self.convergenceThresholdNARMAX = args.convth if args != None and args.convth != None else 0.2
         self.maxIterationsNARMAX = args.maxit if args != None and args.maxit != None else 10
@@ -272,11 +272,11 @@ class _Froe(object):
         plt.show()
 
 
-    def calculateModel(self, z1):
+    def calculateModel(self, z1, varianceToExplain):
         u1 = []
         #parameters
         polDegree = self.polDegree
-        varianceToExplain1 = self.varianceToExplain1
+        varianceToExplain1 = varianceToExplain
         varianceToExplain2 = self.varianceToExplain2
         nU = self.nU
         nY = self.nY
