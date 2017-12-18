@@ -6,6 +6,7 @@ import os
 import numpy as np
 from Froe import _Froe as FroeAlgorithm
 from joblib import Parallel, delayed
+import textwrap as tw
 
 def running_mean(x, N):
     cumsum = np.cumsum(np.insert(x, 0, 0))
@@ -104,13 +105,25 @@ def plotCSV():
 
     logs = [name for name in os.listdir('Logs') if os.path.splitext(name)[1] == '.csv']
 
+    dataNames = ["AccX","AccY","AccZ","GyroX","GyroY","GyroZ","MagX","MagY","MagZ"]
+
     for file_name in logs:
         data = extractDataFromFile(file_name)
         time = data[9]
-
+        th = 10;
         print(file_name)
+        finalAnnotation = ''
         for i in range(len(data) - 1):
-            print('sensorData', i, '- ratio', froe.run(dataBuono[i], data[i], thetas[i]))
+            ratio = froe.run(dataBuono[i], data[i], thetas[i])
+            if(ratio > th):
+                finalAnnotation += dataNames[i] + ' - ratio ' + str(ratio) + " X \n"
+                print('sensorData', dataNames[i], ' - ratio',ratio, " X ")
+            else:
+                finalAnnotation += dataNames[i] + ' - ratio ' + str(ratio) + " ✓ \n"
+                print('sensorData', dataNames[i], ' - ratio',ratio, " ✓ ")
+
+
+
         print('\n\n')
         plt.figure(num=file_name)
 
@@ -121,8 +134,10 @@ def plotCSV():
         plt.xlabel('Time')
         plt.ylabel('Accelerometer')
         plt.title('Accelerometer data')
+        plt.suptitle(file_name, fontsize=16)
         plt.legend()
 
+        plt.subplots_adjust(hspace = 0.5, wspace = 0.5)
         plt.subplot(222)
         plt.plot(time,data[3], label='GyroX')
         plt.plot(time,data[4], label='GyroY')
@@ -131,7 +146,13 @@ def plotCSV():
         plt.ylabel('gyroscope')
         plt.title('gyroscope data')
         plt.legend()
+        plt.annotate(finalAnnotation,
+            xy=(0.5, 0), xytext=(0, 0),
+            xycoords=('axes fraction', 'figure fraction'),
+            textcoords='offset points',
+            size=12, ha='center', va='bottom')
 
+        plt.subplots_adjust(hspace = 0.5)
         plt.subplot(223)
         plt.plot(time,data[6], label='MagX')
         plt.plot(time,data[7], label='MagY')
@@ -140,6 +161,7 @@ def plotCSV():
         plt.ylabel('magnetometer')
         plt.title('magnetometer data')
         plt.legend()
+
 
         plt.show()
 
