@@ -104,13 +104,20 @@ def plotCSV():
 
     logs = [name for name in os.listdir('Logs') if os.path.splitext(name)[1] == '.csv']
 
+    dataNames = ["AccX","AccY","AccZ","GyroX","GyroY","GyroZ","MagX","MagY","MagZ"]
+
     for file_name in logs:
         data = extractDataFromFile(file_name)
         time = data[9]
-
+        th = 10;
         print(file_name)
         for i in range(len(data) - 1):
-            print('sensorData', i, '- ratio', froe.run(dataBuono[i], data[i], thetas[i]))
+            ratio = froe.run(dataBuono[i], data[i], thetas[i])
+            if(ratio > th):
+                print('sensorData', dataNames[i], '- ratio',ratio, " X " )
+            else:
+                print('sensorData', dataNames[i], '- ratio',ratio, " ✓ " )
+
         print('\n\n')
         plt.figure(num=file_name)
 
