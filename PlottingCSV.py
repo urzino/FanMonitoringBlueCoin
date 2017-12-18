@@ -18,7 +18,7 @@ def filterData(data, postfilter_cut):
     temp = temp[postfilter_cut:]
     return temp
 
-def extractDataFromFile(file_path):
+def extractDataFromFile(file_path, preprocessing_cut):
     time = []
     accX = []
     accY = []
@@ -30,7 +30,7 @@ def extractDataFromFile(file_path):
     magY = []
     magZ = []
 
-    with open('Logs/VentolaGrande/'+file_path,'r') as csvfile:
+    with open('Logs/VentolaPiccola/'+file_path,'r') as csvfile:
         next(csvfile, None);
         plots = csv.reader(csvfile, delimiter=',')
         i = 0
@@ -48,7 +48,7 @@ def extractDataFromFile(file_path):
             magZ.append(int(row[9]))
         csvfile.close()
 
-    preprocessing_cut = 0
+    #preprocessing_cut = 0
     postfilter_cut = 50
 
     if preprocessing_cut > 0:
@@ -89,9 +89,10 @@ def extractDataFromFile(file_path):
     return [accX, accY, accZ, gyroX, gyroY, gyroZ, magX, magY, magZ, time]
 
 def calculateTheta(i, data):
-    varianceToExplain = [0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997, 0.9997]
+    varianceToExplain = [0.99973, 0.99966, 0.999993, 0.9999, 0.9998, 0.999995, 0.9995, 0.9999785, 0.99978]
     froe = FroeAlgorithm()
     theta = froe.calculateModel(data, varianceToExplain[i])
+    print(i)
     np.save('Models/model_' + str(i), theta)
 
 def calculateModels():
@@ -105,16 +106,16 @@ def plotCSV():
 
     thetas = []
     for i in range(9):
-        thetas.append(np.load('Models/model_' + str(i) + '.npy'))
+        thetas.append(np.load('Models/VentolaPiccola/model_' + str(i) + '.npy'))
 
-    dataBuono = extractDataFromFile('buono1.csv')
+    dataBuono = extractDataFromFile('buono1.csv', 0)
 
-    logs = [name for name in os.listdir('Logs/VentolaGrande/') if os.path.splitext(name)[1] == '.csv']
+    logs = [name for name in os.listdir('Logs/VentolaPiccola/') if os.path.splitext(name)[1] == '.csv']
 
     dataNames = ["AccX","AccY","AccZ","GyroX","GyroY","GyroZ","MagX","MagY","MagZ"]
 
     for file_name in logs:
-        data = extractDataFromFile(file_name)
+        data = extractDataFromFile(file_name, 0)
         time = data[9]
         th = 10;
         print(file_name)
@@ -122,11 +123,11 @@ def plotCSV():
         for i in range(len(data) - 1):
             ratio = froe.run(dataBuono[i], data[i], thetas[i])
             if(ratio > th):
-                finalAnnotation += dataNames[i] + ' - ratio ' + str(ratio) + " X \n"
-                print('sensorData', dataNames[i], ' - ratio',ratio, " X ")
+                finalAnnotation += dataNames[i] + ' - MSPE ratio ' + '{:.2f}'.format(ratio) + " X \n"
+                print('sensorData', dataNames[i], ' - MSPE ratio', ratio, " X ")
             else:
-                finalAnnotation += dataNames[i] + ' - ratio ' + str(ratio) + " ✓ \n"
-                print('sensorData', dataNames[i], ' - ratio',ratio, " ✓ ")
+                finalAnnotation += dataNames[i] + ' - MSPE ratio ' + '{:.2f}'.format(ratio) + " ✓ \n"
+                print('sensorData', dataNames[i], ' - MSPE ratio',ratio, " ✓ ")
 
 
 
@@ -172,7 +173,7 @@ def plotCSV():
         plt.show()
 
 if __name__ == "__main__":
-    models = [name for name in os.listdir('Models') if os.path.splitext(name)[1] == '.npy']
+    models = [name for name in os.listdir('Models/VentolaPiccola') if os.path.splitext(name)[1] == '.npy']
     if len(models) < 9:
         calculateModels()
     else:
