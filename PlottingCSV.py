@@ -129,16 +129,40 @@ def plotCSV():
         th = 10;
         print(name)
         finalAnnotation = ''
+        backgroundcolor = 'green'
+        AccDefCount = 0;
+        GyroDefCount = 0;
+        MagDefCount = 0;
         for i in range(len(data) - 1):
             ratio = froe.run(goodData[i], data[i], thetas[i])
             if(ratio > th):
                 finalAnnotation += dataNames[i] + ' - MSPE ratio ' + '{:.2f}'.format(ratio) + " X \n"
+                if(i>=0 & i<3):
+                    AccDefCount+=1
+                elif(i>=3 & i<6):
+                    GyroDefCount+=1
+                else:
+                    MagDefCount+=1
+
+
                 print('sensorData', dataNames[i], ' - MSPE ratio', ratio, " X ")
             else:
                 finalAnnotation += dataNames[i] + ' - MSPE ratio ' + '{:.2f}'.format(ratio) + " ✓ \n"
                 print('sensorData', dataNames[i], ' - MSPE ratio',ratio, " ✓ ")
 
         print('\n\n')
+        if(AccDefCount + GyroDefCount + MagDefCount < 2):
+            backgroundcolor = "green"
+
+        elif(AccDefCount + GyroDefCount + MagDefCount <4):
+            backgroundcolor = "orange"
+
+        else:
+            backgroundcolor = "red"
+
+
+
+
         plt.figure(num=name)
 
         plt.subplot(221)
@@ -161,10 +185,10 @@ def plotCSV():
         plt.title('gyroscope data')
         plt.legend()
         plt.annotate(finalAnnotation,
-            xy=(0.5, 0), xytext=(0, 0),
+            xy=(0.5, 0.2), xytext=(0.5, 0.5),
             xycoords=('axes fraction', 'figure fraction'),
             textcoords='offset points',
-            size=12, ha='center', va='bottom')
+            size=12, ha='center', va='bottom',backgroundcolor=backgroundcolor)
 
         plt.subplots_adjust(hspace = 0.5)
         plt.subplot(223)
