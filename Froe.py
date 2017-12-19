@@ -1,3 +1,7 @@
+'''
+Created by Federico Milani, Davide Urzino, Dalla Longa Emanuele
+'''
+
 import scipy.io as sio
 from scipy.signal import lfilter
 import numpy as np
@@ -18,14 +22,10 @@ class _Froe(object):
         self.nY= args.ny if args != None and args.ny != None else 10
         self.polDegree = args.deg if args != None and args.deg != None else 3
         self.inclBias = args.incbias if args != None and args.incbias != None else True
-        self.varianceToExplain1 = args.var1 if args != None and args.var1 != None else 0.9996
+        self.varianceToExplain1 = args.var1 if args != None and args.var1 != None else 0.99973
         self.varianceToExplain2 = args.var2 if args != None and args.var2 != None else 0.9999
         self.convergenceThresholdNARMAX = args.convth if args != None and args.convth != None else 0.2
         self.maxIterationsNARMAX = args.maxit if args != None and args.maxit != None else 10
-
-    def running_mean(self, x, N):
-        cumsum = np.cumsum(np.insert(x, 0, 0))
-        return (cumsum[N:] - cumsum[:-N]) / float(N)
 
     def writeModel(self, Theta, regDim, nU, nY, nE, polDegree, inclBias): #write model as a string easier to print
         tempModelBasic = list()
@@ -239,44 +239,11 @@ class _Froe(object):
         MSE /= yDim
         return MSE
 
-    def plotCorrelation(self, value, xlabel, ylabel, tit, confidence, yDim, nr): #Plot correlation graphs
-        plt.subplots_adjust(hspace = 0.4)
-        plt.subplot(nr)
-        plt.plot(value, color = "blue")
-        plt.plot(confidence, color = "red")
-        plt.plot(-confidence, color = "green")
-        plt.title(tit)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        plt.gca().set_ylim([-1,1])
-        plt.gca().set_xlim([0,100]) #first 100 lags
-
-    def plotValidationTest(self, confidence, residuals, Uval, yDim, testType, num): #plot all validation tests
-
-        uMeanSquared = np.power(np.mean(Uval), 2)
-
-        Phi_e_e = acf(residuals , nlags = yDim - 1, unbiased = False)
-        Phi_u_e = ccf(Uval, residuals, unbiased = False)
-        Phi_e_eu = ccf(residuals ,np.multiply(residuals, Uval), unbiased = False)
-        Phi_u2_e = ccf(np.subtract(np.power(Uval, 2), uMeanSquared), residuals, unbiased = False)
-        Phi_u2_e2 = ccf(np.subtract(np.power(Uval, 2), uMeanSquared),np.power(residuals, 2), unbiased = False)
-
-        plt.suptitle(testType + " validation tests " + num)
-
-        self.plotCorrelation(Phi_e_e, r'$\tau$', r'$\phi_{ee}$', r'$\phi_{ee}(\tau)$', confidence, yDim, 321)
-        self.plotCorrelation(Phi_u_e, r'$\tau$', r'$\phi_{ue}$', r'$\phi_{ue}(\tau)$', confidence, yDim, 322)
-        self.plotCorrelation(Phi_e_eu, r'$\tau$', r'$\phi_{e(eu)}$', r'$\phi_{e(eu)}(\tau)$', confidence, yDim, 323)
-        self.plotCorrelation(Phi_u2_e, r'$\tau$', r'$\phi_{{u}^2e}$', r'$\phi_{{u}^2e}(\tau)$', confidence, yDim, 324)
-        self.plotCorrelation(Phi_u2_e2, r'$\tau$', r'$\phi_{{u}^2{e}^2}$',  r'$\phi_{{u}^2{e}^2}(\tau)$',confidence,yDim, 325)
-
-        plt.show()
-
-
-    def calculateModel(self, z1):
+    def calculateModel(self, z1, varianceToExplain):
         u1 = []
         #parameters
         polDegree = self.polDegree
-        varianceToExplain1 = self.varianceToExplain1
+        varianceToExplain1 = varianceToExplain
         varianceToExplain2 = self.varianceToExplain2
         nU = self.nU
         nY = self.nY
@@ -300,50 +267,8 @@ class _Froe(object):
 
     def run(self, z1, z2, ThetaSelected): #main algorithm
         u1 = []
-        u2=[]
-        '''
-        dataToAnalyze = 2
+        u2 = []
 
-        with open('Logs/buono3.csv','r') as csvfile:
-            next(csvfile, None);
-            plots = csv.reader(csvfile, delimiter=',')
-            for row in plots:
-                z1.append(int(row[dataToAnalyze]))
-            csvfile.close()
-
-        with open('Logs/buono4.csv','r') as csvfile:
-            next(csvfile, None);
-            plots = csv.reader(csvfile, delimiter=',')
-            for row in plots:
-                z2.append(int(row[dataToAnalyze]))
-            csvfile.close()
-
-        with open('Logs/cattivoCartaSotto.csv','r') as csvfile:
-            next(csvfile, None);
-            plots = csv.reader(csvfile, delimiter=',')
-            for row in plots:
-                z3.append(int(row[dataToAnalyze]))
-            csvfile.close()
-
-
-        b = [0.000921992213781247, 0.00335702792571534, 0.00666846411080491, 0.00755286336642893, 0.00103278035537582, -0.0154786656220236, -0.0369577564468621, -0.0489939394790694, -0.0332613413754055, 0.0208964377504099, 0.105771877241975, 0.194080920241419, 0.250550621094879, 0.250550621094879, 0.194080920241419, 0.105771877241975, 0.0208964377504099, -0.0332613413754055, -0.0489939394790694, -0.0369577564468621, -0.0154786656220236, 0.00103278035537582, 0.00755286336642893, 0.00666846411080491, 0.00335702792571534, 0.000921992213781247]
-
-        filter_size=6
-        preprocessing_cut = 800
-        postfilter_cut = 50
-
-        z1 = z1[preprocessing_cut:-preprocessing_cut]
-        z1 = lfilter(b, [1.0], z1)
-        z1 = z1[postfilter_cut:]
-
-        z2 = z2[preprocessing_cut:-preprocessing_cut]
-        z2 = lfilter(b, [1.0], z2)
-        z2 = z2[postfilter_cut:]
-
-        z3 = z3[preprocessing_cut:-preprocessing_cut]
-        z3 = lfilter(b, [1.0], z3)
-        z3 = z3[postfilter_cut:]
-        '''
         #Training Set
         U, Y = np.array(u1) , np.array(z1)
 
@@ -356,148 +281,41 @@ class _Froe(object):
 
         yDimVal1 = len(Yval1)
         uDimVal1 = len(Uval1)
-        '''
-        yDimVal2 = len(Yval2)
-        uDimVal2 = len(Uval2)
-        '''
+
         #parameters
         polDegree = self.polDegree
-        varianceToExplain1 = self.varianceToExplain1
-        varianceToExplain2 = self.varianceToExplain2
         nU = self.nU
         nY = self.nY
         nE = self.nE
         inclBias = self.inclBias
-        convergenceThresholdNARMAX = self.convergenceThresholdNARMAX
-        maxIterationsNARMAX = self.maxIterationsNARMAX
 
-        YhatPredictionIde = None #default initialization
-        YhatSimulationIde = None
+        #default initialization
+        YhatPredictionIde = None
         YhatPredictionVal1 = None
-        YhatSimulationVal1 = None
-        YhatPredictionVal2 = None
-        YhatSimulationVal2 = None
-        '''
-        print("\nStarting model with the following time delays: U", nU, "Y", nY, "E", nE, "\n")
 
-        ThetaSelected , Model = self.froe(nU, nY, nE, U, Y, np.zeros(shape = (yDimIde), dtype = np.float64), polDegree, yDimIde, inclBias, varianceToExplain1, varianceToExplain2, 0, convergenceThresholdNARMAX, maxIterationsNARMAX)
-
-        print("Model Obtained:\n")
-        print(Model,"\n")
-
-        print("Results on the identification set\n")
-        '''
         #Prediction results on identification set
         YhatPredictionIde = self.generateYhat(0, U, Y, np.zeros(shape = (yDimIde), dtype = np.float64), ThetaSelected, polDegree, inclBias, yDimIde, nU, nY, nE)
         if (not YhatPredictionIde is None):
             residualsPredictionIde = self.calcResiduals(Y, YhatPredictionIde, yDimIde)
             msePredictionIde = self.calcMSE(residualsPredictionIde, yDimIde)
-            '''
-            #Simulation results on identification set
-            YhatSimulationIde = self.generateYhat(1, U, Y, residualsPredictionIde, ThetaSelected, polDegree, inclBias, yDimIde, nU, nY, nE)
-            if (not YhatSimulationIde is None):
-                residualsSimulationIde = self.calcResiduals(Y, YhatSimulationIde, yDimIde)
-                mseSimulationIde = self.calcMSE(residualsSimulationIde, yDimIde)
-            '''
         '''
         if (not YhatPredictionIde is None):
             print("MSPE" , msePredictionIde, "\n")
-        if (not YhatSimulationIde is None):
-            print("MSSE" , mseSimulationIde, "\n")
-
-        print("Results on the validation set 1\n")
         '''
+
+        #print("Results on the validation set 1\n")
+
         #Prediction results on validation set 1
         YhatPredictionVal1 = self.generateYhat(0, Uval1, Yval1, np.zeros(shape = (yDimVal1), dtype = np.float64), ThetaSelected, polDegree, inclBias, yDimVal1, nU, nY, nE)
         if (not YhatPredictionVal1 is None):
             residualsPredictionVal1 = self.calcResiduals(Yval1, YhatPredictionVal1, yDimVal1)
             msePredictionVal1 = self.calcMSE(residualsPredictionVal1, yDimVal1)
-            '''
-            #Simulation results on validation set 1
-            YhatSimulationVal1 = self.generateYhat(1, Uval1, Yval1, residualsPredictionVal1, ThetaSelected, polDegree, inclBias, yDimVal1, nU, nY, nE)
-            if (not YhatSimulationVal1 is None):
-                residualsSimulationVal1 = self.calcResiduals(Yval1, YhatSimulationVal1, yDimVal1)
-                mseSimulationVal1 = self.calcMSE(residualsSimulationVal1, yDimVal1)
-            '''
         '''
         if (not YhatPredictionVal1 is None):
             print("MSPE" , msePredictionVal1, "\n")
-        if (not YhatSimulationVal1 is None):
-            print("MSSE" , mseSimulationVal1, "\n")
-        '''
-
-        '''
-        print("Results on the validation set 2\n")
-
-        #Prediction results on validation set 2
-        YhatPredictionVal2 = self.generateYhat(0, Uval2, Yval2, np.zeros(shape = (yDimVal2), dtype = np.float64), ThetaSelected, polDegree, inclBias, yDimVal2, nU, nY, nE)
-        if (not YhatPredictionVal2 is None):
-            residualsPredictionVal2 = self.calcResiduals(Yval2, YhatPredictionVal2, yDimVal2)
-            msePredictionVal2 = self.calcMSE(residualsPredictionVal2, yDimVal2)
-            #Simulation results on validation set 2
-            YhatSimulationVal2 = self.generateYhat(1, Uval2, Yval2, residualsPredictionVal2, ThetaSelected, polDegree, inclBias, yDimVal2, nU, nY, nE)
-            if (not YhatSimulationVal2 is None):
-                residualsSimulationVal2 = self.calcResiduals(Yval2, YhatSimulationVal2, yDimVal2)
-                mseSimulationVal2 = self.calcMSE(residualsSimulationVal2, yDimVal2)
-        if (not YhatPredictionVal2 is None):
-            print("MSPE" , msePredictionVal2, "\n")
-        if (not YhatSimulationVal2 is None):
-            print("MSSE" , mseSimulationVal2, "\n")
-        '''
-
-        '''
-        plt.subplot("211")
-        plt.plot(Y[30:], color = "red")
-        if (not YhatPredictionIde is None):
-            plt.plot(YhatPredictionIde[30:], color = "blue")
-        if (not YhatSimulationIde is None):
-            plt.plot(YhatSimulationIde[30:], color = "green")
-        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Identification Set
-        plt.xlabel('time')
-        plt.ylabel('output')
-
-        plt.subplots_adjust(hspace = 0.5)
-        plt.subplot('212')
-        plt.plot(Yval1[30:], color = "red")
-        if (not YhatPredictionVal1 is None):
-            plt.plot(YhatPredictionVal1[30:], color = "blue")
-        if (not YhatSimulationVal1 is None):
-            plt.plot(YhatSimulationVal1[30:], color = "green")
-        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 1
-        plt.xlabel('time')
-        plt.ylabel('output')
-        plt.show()
         '''
 
         return msePredictionVal1 / msePredictionIde
-
-        '''
-        plt.subplots_adjust(hspace = 0.5)
-        plt.subplot('313')
-        plt.plot(Yval2[30:], color = "red")
-        if (not YhatPredictionVal2 is None):
-            plt.plot(YhatPredictionVal2[30:], color = "blue")
-        if (not YhatSimulationVal2 is None):
-            plt.plot(YhatSimulationVal2[30:], color = "green")
-        plt.title('Y (red) / Y predicted (blue)') # / Y simulated (green) - Validation Set 2
-        plt.xlabel('time')
-        plt.ylabel('output')
-        plt.show()
-
-        #plt.show()
-
-        #95% confidence
-        confidence1 = np.full(shape = (yDimVal1), fill_value = (1.96 / np.sqrt(yDimVal1)) , dtype = np.float64)
-        confidence2 = np.full(shape = (yDimVal2), fill_value = (1.96 / np.sqrt(yDimVal2)) , dtype = np.float64)
-        if (not YhatPredictionVal1 is None):
-            self.plotValidationTest(confidence1, residualsPredictionVal1 ,Uval1, yDimVal1, "Prediction", "1")
-        if (not YhatSimulationVal1 is None):
-            self.plotValidationTest(confidence1, residualsSimulationVal1 ,Uval1, yDimVal1, "Simulation", "1")
-        if (not YhatPredictionVal2 is None):
-            self.plotValidationTest(confidence2, residualsPredictionVal2 ,Uval2, yDimVal2, "Prediction", "2")
-        if (not YhatSimulationVal2 is None):
-            self.plotValidationTest(confidence2, residualsSimulationVal2 ,Uval2, yDimVal2, "Simulation", "2")
-        '''
 
 if __name__ == "__main__": #all optional parameters from terminal
     parser = argparse.ArgumentParser(description='Performs identification and validation on narx/narmax models.')
