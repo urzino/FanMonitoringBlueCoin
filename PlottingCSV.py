@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 import textwrap as tw
 
 #subfolder for models and logs
-folder = '/VentolaGrande'
+folder = '/VentolaPiccola'
 #log of fan in good state
 goodFile = 'good fan 1.csv'
 
@@ -106,25 +106,16 @@ def plotCSV():
     for i in range(9):
         thetas.append(np.load('Models' + folder + '/model_' + str(i) + '.npy'))
 
-    goodData = []
-    if folder == '/VentolaPiccola':
-        goodData = extractDataFromFile(goodFile, 800)
-    else:
-        goodData = extractDataFromFile(goodFile, 0)
+    goodData = extractDataFromFile(goodFile, 0)
 
     logs = [name for name in os.listdir('Logs' + folder) if os.path.splitext(name)[1] == '.csv']
 
     dataNames = ["AccX","AccY","AccZ","GyroX","GyroY","GyroZ","MagX","MagY","MagZ"]
 
     for file_name in logs:
-        data = []
         name = os.path.splitext(file_name)[0]
 
-        #per ora nella ventola piccola bisogna fare preprocessing in buono1
-        if  name == os.path.splitext(goodFile)[0] and folder == '/VentolaPiccola':
-            data = extractDataFromFile(file_name, 800)
-        else:
-            data = extractDataFromFile(file_name, 0)
+        data = extractDataFromFile(file_name, 0)
         time = data[9]
         th = 10;
         print(name)
