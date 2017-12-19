@@ -1,3 +1,7 @@
+'''
+Created by Federico Milani, Davide Urzino, Dalla Longa Emanuele
+'''
+
 import matplotlib.pyplot as plt
 from scipy.signal import lfilter
 import csv

@@ -1,3 +1,7 @@
+'''
+Created by Federico Milani, Davide Urzino, Dalla Longa Emanuele
+'''
+
 import scipy.io as sio
 from scipy.signal import lfilter
 import numpy as np
