@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 import textwrap as tw
 
 #subfolder for models and logs
-folder = '/VentolaPiccola'
+folder = '/VentolaGrande'
 #log of fan in good state
 goodFile = 'good fan 1.csv'
 
