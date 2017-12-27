@@ -95,7 +95,7 @@ def calculateTheta(i, data):
 
 #takes the log of the motor in a good state and calculate all the models
 def calculateModels():
-    goodData = extractDataFromFile(goodFile)
+    goodData = extractDataFromFile(goodFile, 0)
     Parallel(n_jobs = 5)(delayed(calculateTheta)(i, goodData[i]) for i in range(len(goodData) - 1))
 
 #plots each sensor, compares each log with the model and shows the output
